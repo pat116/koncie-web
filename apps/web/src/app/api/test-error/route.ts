@@ -3,10 +3,21 @@
  * criterion #6). Hit this once on the staging URL to confirm the error
  * appears in the Sentry dashboard, then forget about it — this route is
  * harmless and stays in the repo as ongoing smoke-test ammo.
+ *
+ * Explicitly calls captureException + flush so the route doesn't rely on
+ * Next.js auto-instrumentation (which can miss serverless Lambda cold-start
+ * teardown). Belt and braces.
  */
+import * as Sentry from '@sentry/nextjs';
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export function GET(): never {
-  throw new Error('Koncie Sentry smoke test — if you see this in Sentry, observability is wired.');
+export async function GET(): Promise<never> {
+  const err = new Error(
+    'Koncie Sentry smoke test — if you see this in Sentry, observability is wired.',
+  );
+  Sentry.captureException(err);
+  await Sentry.flush(2000);
+  throw err;
 }
