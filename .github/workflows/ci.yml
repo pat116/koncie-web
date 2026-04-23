@@ -62,3 +62,30 @@ jobs:
         env:
           KONCIE_SIGNED_LINK_SECRET: 'ci-placeholder-at-least-32-chars-long-xxx'
         run: pnpm test
+
+  e2e:
+    name: Playwright E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: checks
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @koncie/web exec playwright install --with-deps chromium
+      - env:
+          DATABASE_URL: 'postgresql://ci:ci@localhost:5432/ci?pgbouncer=true'
+          DIRECT_URL: 'postgresql://ci:ci@localhost:5432/ci'
+          NEXT_PUBLIC_SUPABASE_URL: 'https://ci.placeholder.supabase.co'
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: 'ci-placeholder'
+          SUPABASE_SERVICE_ROLE_KEY: 'ci-placeholder'
+          KONCIE_SIGNED_LINK_SECRET: 'ci-placeholder-at-least-32-chars-long-xxx'
+          NEXT_PUBLIC_SITE_URL: 'http://localhost:3000'
+        run: pnpm --filter @koncie/web test:e2e
