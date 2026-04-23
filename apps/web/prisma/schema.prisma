@@ -1,0 +1,83 @@
+// Koncie Prisma schema v1 — Sprint 1
+// Reference: docs/specs/2026-04-23-sprint-1-design.md §"Domain model (Prisma schema v1)"
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum PartnerType {
+  HOTELLINK
+  SITEMINDER
+  OPERA
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+model PartnerIntegration {
+  id         String      @id @default(uuid()) @db.Uuid
+  type       PartnerType
+  name       String      @unique
+  config     Json
+  properties Property[]
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+
+  @@map("partner_integrations")
+}
+
+model Property {
+  id                   String             @id @default(uuid()) @db.Uuid
+  slug                 String             @unique
+  name                 String
+  country              String
+  region               String
+  timezone             String
+  partnerIntegrationId String             @map("partner_integration_id") @db.Uuid
+  partnerIntegration   PartnerIntegration @relation(fields: [partnerIntegrationId], references: [id])
+  bookings             Booking[]
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+
+  @@map("properties")
+}
+
+model Guest {
+  id         String    @id @default(uuid()) @db.Uuid
+  email      String    @unique
+  firstName  String    @map("first_name")
+  lastName   String    @map("last_name")
+  authUserId String?   @unique @map("auth_user_id") @db.Uuid
+  claimedAt  DateTime? @map("claimed_at")
+  bookings   Booking[]
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@map("guests")
+}
+
+model Booking {
+  id          String        @id @default(uuid()) @db.Uuid
+  guestId     String        @map("guest_id") @db.Uuid
+  guest       Guest         @relation(fields: [guestId], references: [id])
+  propertyId  String        @map("property_id") @db.Uuid
+  property    Property      @relation(fields: [propertyId], references: [id])
+  externalRef String        @unique @map("external_ref")
+  checkIn     DateTime      @map("check_in") @db.Date
+  checkOut    DateTime      @map("check_out") @db.Date
+  numGuests   Int           @map("num_guests")
+  status      BookingStatus
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  @@map("bookings")
+}
