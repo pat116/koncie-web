@@ -44,10 +44,21 @@ jobs:
       - name: Build
         env:
           # Staging/prod deploys use real values; CI uses placeholders so the
-          # build completes. Actual Sentry ingestion happens at runtime, not build.
+          # build completes. Actual Sentry ingestion and DB access happen at
+          # runtime, not build — Prisma generate reads the schema only.
           SENTRY_DSN: ''
           NEXT_PUBLIC_SENTRY_DSN: ''
+          DATABASE_URL: 'postgresql://ci:ci@localhost:5432/ci?pgbouncer=true'
+          DIRECT_URL: 'postgresql://ci:ci@localhost:5432/ci'
+          NEXT_PUBLIC_SUPABASE_URL: 'https://ci.placeholder.supabase.co'
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: 'ci-placeholder'
+          SUPABASE_SERVICE_ROLE_KEY: 'ci-placeholder'
+          KONCIE_SIGNED_LINK_SECRET: 'ci-placeholder-at-least-32-chars-long-xxx'
+          RESEND_API_KEY: ''
+          NEXT_PUBLIC_SITE_URL: 'http://localhost:3000'
         run: pnpm build
 
       - name: Test
+        env:
+          KONCIE_SIGNED_LINK_SECRET: 'ci-placeholder-at-least-32-chars-long-xxx'
         run: pnpm test
