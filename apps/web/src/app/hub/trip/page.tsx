@@ -33,6 +33,15 @@ export default async function TripPage() {
   }
 
   const b = guest.bookings[0];
+  if (!b) {
+    return (
+      <div className="px-5 pt-5">
+        <p className="text-sm text-koncie-charcoal/60">
+          No upcoming trip to show.
+        </p>
+      </div>
+    );
+  }
   const nights = differenceInCalendarDays(b.checkOut, b.checkIn);
 
   return (
