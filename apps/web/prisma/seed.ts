@@ -70,6 +70,69 @@ async function main() {
     expiresInSeconds: 60 * 60 * 24 * 7, // 7 days
   });
 
+  // Sprint 2 — five Namotu activity upsells
+  await prisma.upsell.deleteMany({ where: { propertyId: property.id } });
+  await prisma.upsell.createMany({
+    data: [
+      {
+        propertyId: property.id,
+        category: 'ACTIVITY',
+        name: 'Half-day reef snorkel',
+        description:
+          'Guided boat trip to Namotu Lefts outer reef. Gear, lunch, and fresh coconuts included.',
+        priceMinor: 7500,
+        priceCurrency: 'FJD',
+        providerPayoutPct: '85.00',
+        imageUrl: '/images/upsells/snorkel.jpg',
+      },
+      {
+        propertyId: property.id,
+        category: 'ACTIVITY',
+        name: 'Sunset sail',
+        description:
+          'Two-hour catamaran sail along the reef edge at golden hour. Champagne + canapés on board.',
+        priceMinor: 12500,
+        priceCurrency: 'FJD',
+        providerPayoutPct: '85.00',
+        imageUrl: '/images/upsells/sunset-sail.jpg',
+      },
+      {
+        propertyId: property.id,
+        category: 'SPA',
+        name: 'Resort spa treatment',
+        description:
+          'Traditional Bobo massage, 60 minutes, in the over-water spa bure.',
+        priceMinor: 18000,
+        priceCurrency: 'FJD',
+        providerPayoutPct: '85.00',
+        imageUrl: '/images/upsells/spa.jpg',
+      },
+      {
+        propertyId: property.id,
+        category: 'ACTIVITY',
+        name: 'Pro surfing lesson',
+        description:
+          '90-minute one-on-one coaching with a Namotu local pro at a beginner-friendly reef break.',
+        priceMinor: 22000,
+        priceCurrency: 'FJD',
+        providerPayoutPct: '85.00',
+        imageUrl: '/images/upsells/surf-lesson.jpg',
+      },
+      {
+        propertyId: property.id,
+        category: 'ACTIVITY',
+        name: 'Cultural village tour',
+        description:
+          'Half-day visit to a nearby village with kava ceremony, meke dance, and village lunch.',
+        priceMinor: 9500,
+        priceCurrency: 'FJD',
+        providerPayoutPct: '85.00',
+        imageUrl: '/images/upsells/village-tour.jpg',
+      },
+    ],
+  });
+  console.log('[seed] 5 Namotu upsells inserted');
+
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
   console.log('\n✨ Seed complete.\n');
   console.log(`Guest: ${guest.firstName} ${guest.lastName} <${guest.email}>`);

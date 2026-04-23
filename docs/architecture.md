@@ -67,3 +67,25 @@ For auth specifics see `docs/auth.md`. For the domain model see `docs/data-model
 
 Pinned in `package.json` / `apps/web/package.json`:
 Next.js 14.2, React 18.3, TypeScript 5.7 strict, Tailwind 3.4, Node 20+, pnpm 10, Prisma 5.22, `@supabase/ssr` 0.5, `@supabase/supabase-js` 2.47, Resend 4, jose 5, Vitest 2, Playwright 1.49.
+
+## Payments (Sprint 2+)
+
+Sprint 2 adds the `PaymentProvider` port alongside the Sprint 1 `PartnerAdapter`.
+
+```
+[ app/hub/checkout/* ]
+        │
+        ▼
+[ lib/payments/provider.ts ]  <-- DI boundary
+        │
+        ▼
+[ PaymentProvider interface ]  (packages/types/src/payments.ts)
+        │
+        ▼
+[ KovenaMockAdapter ]  (Sprint 2)
+[ KovenaLiveAdapter ]  (Sprint 3 — not yet written)
+```
+
+**Key rule.** Nothing under `app/hub/checkout/*` imports the adapter directly. All traffic goes through the DI module. Sprint 3 swaps the exported instance in one line.
+
+**Merchant-of-Record posture.** Every Transaction row carries `mcc='4722'`, a fee split (`amount_minor = provider_payout_minor + koncie_fee_minor`), and a 1:1 reference to a `TrustLedgerEntry` on capture. These invariants are enforced by Postgres CHECK constraints — see `docs/mor-compliance.md`.

@@ -1,5 +1,5 @@
-// Koncie Prisma schema v1 — Sprint 1
-// Reference: docs/specs/2026-04-23-sprint-1-design.md §"Domain model (Prisma schema v1)"
+// Koncie Prisma schema v2 — Sprint 2
+// Reference: docs/plans/2026-04-23-sprint-2-plan.md Tasks 6–9
 
 generator client {
   provider = "prisma-client-js"
@@ -23,6 +23,44 @@ enum BookingStatus {
   COMPLETED
 }
 
+// ─── Sprint 2 enums ──────────────────────────────────────────────────────────
+
+enum UpsellCategory {
+  ACTIVITY
+  TRANSFER
+  SPA
+  DINING
+  OTHER
+}
+
+enum UpsellStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum TransactionStatus {
+  pending
+  authorized
+  captured
+  failed
+  refunded
+}
+
+enum PaymentProviderName {
+  KOVENA_MOCK
+  KOVENA_LIVE
+  STRIPE
+}
+
+enum TrustLedgerEventType {
+  COLLECTED
+  HELD
+  PAID_OUT
+  REFUNDED
+}
+
+// ─── Sprint 1 models ─────────────────────────────────────────────────────────
+
 model PartnerIntegration {
   id         String      @id @default(uuid()) @db.Uuid
   type       PartnerType
@@ -45,6 +83,7 @@ model Property {
   partnerIntegrationId String             @map("partner_integration_id") @db.Uuid
   partnerIntegration   PartnerIntegration @relation(fields: [partnerIntegrationId], references: [id])
   bookings             Booking[]
+  upsells              Upsell[]
   createdAt            DateTime           @default(now()) @map("created_at")
   updatedAt            DateTime           @updatedAt @map("updated_at")
 
@@ -52,32 +91,126 @@ model Property {
 }
 
 model Guest {
-  id         String    @id @default(uuid()) @db.Uuid
-  email      String    @unique
-  firstName  String    @map("first_name")
-  lastName   String    @map("last_name")
-  authUserId String?   @unique @map("auth_user_id") @db.Uuid
-  claimedAt  DateTime? @map("claimed_at")
-  bookings   Booking[]
-  createdAt  DateTime  @default(now()) @map("created_at")
-  updatedAt  DateTime  @updatedAt @map("updated_at")
+  id           String        @id @default(uuid()) @db.Uuid
+  email        String        @unique
+  firstName    String        @map("first_name")
+  lastName     String        @map("last_name")
+  authUserId   String?       @unique @map("auth_user_id") @db.Uuid
+  claimedAt    DateTime?     @map("claimed_at")
+  bookings     Booking[]
+  transactions Transaction[]
+  savedCards   SavedCard[]
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
 
   @@map("guests")
 }
 
 model Booking {
-  id          String        @id @default(uuid()) @db.Uuid
-  guestId     String        @map("guest_id") @db.Uuid
-  guest       Guest         @relation(fields: [guestId], references: [id])
-  propertyId  String        @map("property_id") @db.Uuid
-  property    Property      @relation(fields: [propertyId], references: [id])
-  externalRef String        @unique @map("external_ref")
-  checkIn     DateTime      @map("check_in") @db.Date
-  checkOut    DateTime      @map("check_out") @db.Date
-  numGuests   Int           @map("num_guests")
-  status      BookingStatus
-  createdAt   DateTime      @default(now()) @map("created_at")
-  updatedAt   DateTime      @updatedAt @map("updated_at")
+  id           String        @id @default(uuid()) @db.Uuid
+  guestId      String        @map("guest_id") @db.Uuid
+  guest        Guest         @relation(fields: [guestId], references: [id])
+  propertyId   String        @map("property_id") @db.Uuid
+  property     Property      @relation(fields: [propertyId], references: [id])
+  externalRef  String        @unique @map("external_ref")
+  checkIn      DateTime      @map("check_in") @db.Date
+  checkOut     DateTime      @map("check_out") @db.Date
+  numGuests    Int           @map("num_guests")
+  status       BookingStatus
+  transactions Transaction[]
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
 
   @@map("bookings")
+}
+
+// ─── Sprint 2 models ─────────────────────────────────────────────────────────
+
+model Upsell {
+  id                String         @id @default(uuid()) @db.Uuid
+  propertyId        String         @map("property_id") @db.Uuid
+  property          Property       @relation(fields: [propertyId], references: [id])
+  category          UpsellCategory
+  name              String
+  description       String
+  priceMinor        Int            @map("price_minor")
+  priceCurrency     String         @map("price_currency") @db.Char(3)
+  /// Decimal(4,2) — e.g. 85.00 = provider keeps 85%
+  providerPayoutPct Decimal        @map("provider_payout_pct") @db.Decimal(4, 2)
+  imageUrl          String         @map("image_url")
+  status            UpsellStatus   @default(ACTIVE)
+  metadata          Json           @default("{}")
+  transactions      Transaction[]
+  createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([propertyId, status])
+  @@map("upsells")
+}
+
+model TrustLedgerEntry {
+  id             String               @id @default(uuid()) @db.Uuid
+  transaction    Transaction?
+  eventType      TrustLedgerEventType @map("event_type")
+  amountMinor    Int                  @map("amount_minor")
+  currency       String               @db.Char(3)
+  trustAccountId String               @map("trust_account_id")
+  externalRef    String?              @map("external_ref")
+  occurredAt     DateTime             @map("occurred_at") @db.Timestamptz
+  createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([trustAccountId, occurredAt])
+  @@map("trust_ledger_entries")
+}
+
+model SavedCard {
+  id            String        @id @default(uuid()) @db.Uuid
+  guestId       String        @map("guest_id") @db.Uuid
+  guest         Guest         @relation(fields: [guestId], references: [id])
+  providerToken String        @map("provider_token")
+  brand         String
+  last4         String        @db.Char(4)
+  expiryMonth   Int           @map("expiry_month")
+  expiryYear    Int           @map("expiry_year")
+  isDefault     Boolean       @default(false) @map("is_default")
+  transactions  Transaction[]
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([guestId])
+  @@map("saved_cards")
+}
+
+model Transaction {
+  id                      String              @id @default(uuid()) @db.Uuid
+  guestId                 String              @map("guest_id") @db.Uuid
+  guest                   Guest               @relation(fields: [guestId], references: [id])
+  bookingId               String              @map("booking_id") @db.Uuid
+  booking                 Booking             @relation(fields: [bookingId], references: [id])
+  upsellId                String              @map("upsell_id") @db.Uuid
+  upsell                  Upsell              @relation(fields: [upsellId], references: [id])
+  savedCardId             String?             @map("saved_card_id") @db.Uuid
+  savedCard               SavedCard?          @relation(fields: [savedCardId], references: [id])
+  /// Always '4722' — enforced by CHECK in migration
+  mcc                     String              @db.Char(4)
+  status                  TransactionStatus
+  amountMinor             Int                 @map("amount_minor")
+  currency                String              @db.Char(3)
+  providerPayoutMinor     Int                 @map("provider_payout_minor")
+  koncieFeeMinor          Int                 @map("koncie_fee_minor")
+  guestDisplayCurrency    String              @map("guest_display_currency") @db.Char(3)
+  guestDisplayAmountMinor Int                 @map("guest_display_amount_minor")
+  fxRateAtPurchase        Decimal             @map("fx_rate_at_purchase") @db.Decimal(12, 6)
+  paymentProvider         PaymentProviderName @map("payment_provider")
+  providerPaymentRef      String              @map("provider_payment_ref")
+  trustLedgerId           String?             @unique @map("trust_ledger_id") @db.Uuid
+  trustLedgerEntry        TrustLedgerEntry?   @relation(fields: [trustLedgerId], references: [id])
+  capturedAt              DateTime?           @map("captured_at") @db.Timestamptz
+  failureReason           String?             @map("failure_reason")
+  createdAt               DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt               DateTime            @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([guestId, createdAt])
+  @@index([providerPaymentRef])
+  @@map("transactions")
 }

@@ -80,3 +80,76 @@ Arrive in the sprint whose code needs them:
 | `HotelStaffUser`, `AdminAuditLog` | Sprint 5 (hotel admin portal) |
 
 Adding them ahead of time would produce migrations we'd regret when the shape of their usage becomes clear.
+
+## Sprint 2 additions
+
+### Upsell
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | uuid (pk) | |
+| `property_id` | uuid (fk → Property) | |
+| `category` | enum | `ACTIVITY`, `TRANSFER`, `SPA`, `DINING`, `OTHER` |
+| `name` | text | |
+| `description` | text | |
+| `price_minor` | int | minor units in `price_currency` |
+| `price_currency` | char(3) | ISO 4217 |
+| `provider_payout_pct` | decimal(4,2) | e.g. `85.00` |
+| `image_url` | text | |
+| `status` | enum | `ACTIVE` / `INACTIVE` |
+| `metadata` | jsonb | |
+| `created_at`, `updated_at` | timestamptz | |
+
+### Transaction (v2 — expanded from Sprint 0 stub)
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | uuid (pk) | |
+| `guest_id` | uuid (fk → Guest) | |
+| `booking_id` | uuid (fk → Booking) | |
+| `upsell_id` | uuid (fk → Upsell) | |
+| `saved_card_id` | uuid (fk → SavedCard, nullable) | |
+| `mcc` | char(4), CHECK = `'4722'` | |
+| `status` | enum | `pending`, `authorized`, `captured`, `failed`, `refunded` |
+| `amount_minor` | int | property-currency amount |
+| `currency` | char(3) | property currency |
+| `provider_payout_minor` | int | |
+| `koncie_fee_minor` | int | |
+| `guest_display_currency` | char(3) | |
+| `guest_display_amount_minor` | int | |
+| `fx_rate_at_purchase` | decimal(12,6) | frozen at capture |
+| `payment_provider` | enum | `KOVENA_MOCK` in Sprint 2 |
+| `provider_payment_ref` | text, indexed | |
+| `trust_ledger_id` | uuid (fk, nullable) | 1:1 with TrustLedgerEntry on capture |
+| `captured_at` | timestamptz, nullable | |
+| `failure_reason` | text, nullable | |
+
+**DB-level CHECKs:**
+- `mcc = '4722'`
+- `amount_minor = provider_payout_minor + koncie_fee_minor`
+- `(status = 'captured') = (trust_ledger_id IS NOT NULL)`
+
+### TrustLedgerEntry
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | uuid (pk) | |
+| `event_type` | enum | `COLLECTED`, `HELD`, `PAID_OUT`, `REFUNDED` |
+| `amount_minor` | int | |
+| `currency` | char(3) | |
+| `trust_account_id` | text | mock `'trust_kovena_mor_fj_0001'` in Sprint 2 |
+| `external_ref` | text, nullable | |
+| `occurred_at` | timestamptz | |
+| `created_at` | timestamptz | |
+
+### SavedCard
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | uuid (pk) | |
+| `guest_id` | uuid (fk → Guest) | |
+| `provider_token` | text | opaque Kovena token |
+| `brand` | text | `VISA`/`MASTERCARD`/`AMEX`/`OTHER` |
+| `last4` | char(4) | |
+| `expiry_month`, `expiry_year` | int | |
+| `is_default` | boolean | partial unique index `(guest_id) WHERE is_default = true` |
