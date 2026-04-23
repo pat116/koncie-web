@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Koncie design tokens as CSS custom properties.
+ * Source of truth lives in `packages/brand/src/tokens.ts`. These mirror
+ * those values in HSL for shadcn/ui compatibility.
+ */
+@layer base {
+  :root {
+    --koncie-navy: 210 100% 12%;
+    --koncie-sand: 45 45% 94%;
+    --koncie-green: 145 63% 48%;
+    --koncie-white: 0 0% 100%;
+    --koncie-charcoal: 0 0% 20%;
+    --koncie-border: 45 30% 85%;
+
+    /* shadcn/ui semantic aliases */
+    --background: var(--koncie-sand);
+    --foreground: var(--koncie-charcoal);
+    --primary: var(--koncie-navy);
+    --primary-foreground: var(--koncie-white);
+    --secondary: var(--koncie-sand);
+    --secondary-foreground: var(--koncie-navy);
+    --accent: var(--koncie-green);
+    --accent-foreground: var(--koncie-white);
+    --muted: var(--koncie-sand);
+    --muted-foreground: var(--koncie-charcoal);
+    --border: var(--koncie-border);
+    --input: var(--koncie-border);
+    --ring: var(--koncie-navy);
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --radius: 1rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+}
