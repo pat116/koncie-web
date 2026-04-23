@@ -10,9 +10,16 @@ async function main() {
     );
   }
 
-  const partner = await prisma.partnerIntegration.upsert({
-    where: { name: 'HotelLink — Namotu pilot' },
-    create: {
+  // Hard reset for idempotent dev seeding. Delete in FK-safe order.
+  // Safe because this is a dev/preview-only script — Production is guarded
+  // by the VERCEL_ENV check above.
+  await prisma.booking.deleteMany({});
+  await prisma.guest.deleteMany({});
+  await prisma.property.deleteMany({});
+  await prisma.partnerIntegration.deleteMany({});
+
+  const partner = await prisma.partnerIntegration.create({
+    data: {
       type: PartnerType.HOTELLINK,
       name: 'HotelLink — Namotu pilot',
       config: {
@@ -20,12 +27,10 @@ async function main() {
         baseUrl: 'https://mock.hotellink.local',
       },
     },
-    update: {},
   });
 
-  const property = await prisma.property.upsert({
-    where: { slug: 'namotu-island-fiji' },
-    create: {
+  const property = await prisma.property.create({
+    data: {
       slug: 'namotu-island-fiji',
       name: 'Namotu Island Fiji',
       country: 'FJ',
@@ -33,22 +38,22 @@ async function main() {
       timezone: 'Pacific/Fiji',
       partnerIntegrationId: partner.id,
     },
-    update: {},
   });
 
-  const guest = await prisma.guest.upsert({
-    where: { email: 'demo@koncie.app' },
-    create: {
-      email: 'demo@koncie.app',
+  // Override via `KONCIE_SEED_EMAIL` during dev so Supabase can deliver the
+  // magic link to a real inbox. Defaults to the demo placeholder.
+  const guestEmail = process.env.KONCIE_SEED_EMAIL ?? 'demo@koncie.app';
+
+  const guest = await prisma.guest.create({
+    data: {
+      email: guestEmail,
       firstName: 'Jane',
       lastName: 'Demo',
     },
-    update: {},
   });
 
-  const booking = await prisma.booking.upsert({
-    where: { externalRef: 'HL-84321-NMT' },
-    create: {
+  const booking = await prisma.booking.create({
+    data: {
       externalRef: 'HL-84321-NMT',
       guestId: guest.id,
       propertyId: property.id,
@@ -57,7 +62,6 @@ async function main() {
       numGuests: 2,
       status: BookingStatus.CONFIRMED,
     },
-    update: {},
   });
 
   const token = await signMagicLink({
@@ -68,7 +72,8 @@ async function main() {
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
   console.log('\n✨ Seed complete.\n');
-  console.log('Signed magic link for demo guest:');
+  console.log(`Guest: ${guest.firstName} ${guest.lastName} <${guest.email}>`);
+  console.log('\nSigned magic link:');
   console.log(`${baseUrl}/welcome?token=${token}\n`);
 }
 
