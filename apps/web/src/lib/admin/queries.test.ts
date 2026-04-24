@@ -11,6 +11,7 @@ import {
   listPriorityAlerts,
   computeRevenueKpis,
   listUpsellTransactionsForCsv,
+  listMessagesForProperty,
 } from './queries';
 import { prisma } from '@/lib/db/prisma';
 
@@ -40,6 +41,9 @@ beforeEach(() => {
     count: vi.fn().mockResolvedValue(0),
   };
   (prisma as any).insuranceQuote = {
+    findMany: vi.fn().mockResolvedValue([]),
+  };
+  (prisma as any).messageLog = {
     findMany: vi.fn().mockResolvedValue([]),
   };
 });
@@ -262,5 +266,48 @@ describe('listUpsellTransactionsForCsv', () => {
     await listUpsellTransactionsForCsv(PROPERTY_ID);
     const call = (prisma as any).transaction.findMany.mock.calls[0][0];
     expect(call.where).toEqual({ booking: { propertyId: PROPERTY_ID } });
+  });
+});
+
+describe('listMessagesForProperty', () => {
+  it('tenant-scopes via guest→bookings→propertyId, orders desc, respects limit', async () => {
+    await listMessagesForProperty(PROPERTY_ID, 25);
+    const call = (prisma as any).messageLog.findMany.mock.calls[0][0];
+    expect(call.where).toEqual({
+      guest: { bookings: { some: { propertyId: PROPERTY_ID } } },
+    });
+    expect(call.orderBy).toEqual({ createdAt: 'desc' });
+    expect(call.take).toBe(25);
+  });
+
+  it('marshals rows into AdminMessageRow shape with guestName fallback', async () => {
+    (prisma as any).messageLog.findMany.mockResolvedValue([
+      {
+        id: 'm1',
+        createdAt: new Date('2026-07-10'),
+        recipientEmail: 'jane@demo.com',
+        kind: 'MAGIC_LINK',
+        subject: 'Your Koncie account for Namotu is ready',
+        status: 'DELIVERED',
+        deliveredAt: new Date('2026-07-10'),
+        guest: { email: 'jane@demo.com', firstName: 'Jane', lastName: 'Demo' },
+      },
+      {
+        id: 'm2',
+        createdAt: new Date('2026-07-09'),
+        recipientEmail: 'orphan@demo.com',
+        kind: 'OTHER',
+        subject: 'Orphaned row',
+        status: 'FAILED',
+        deliveredAt: null,
+        guest: null,
+      },
+    ]);
+    const rows = await listMessagesForProperty(PROPERTY_ID);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]!.guestName).toBe('Jane Demo');
+    expect(rows[0]!.kind).toBe('MAGIC_LINK');
+    expect(rows[1]!.guestName).toBeNull();
+    expect(rows[1]!.guestEmail).toBe('orphan@demo.com');
   });
 });

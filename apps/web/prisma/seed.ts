@@ -1,8 +1,11 @@
+import crypto from 'node:crypto';
 import {
   PrismaClient,
   PartnerType,
   BookingStatus,
   AdminRole,
+  MessageKind,
+  MessageStatus,
 } from '@prisma/client';
 import { signMagicLink } from '../src/lib/auth/signed-link';
 
@@ -18,6 +21,7 @@ async function main() {
   // Hard reset for idempotent dev seeding. Delete in FK-safe order.
   // Safe because this is a dev/preview-only script — Production is guarded
   // by the VERCEL_ENV check above.
+  await prisma.messageLog.deleteMany({});
   await prisma.adminUser.deleteMany({});
   await prisma.booking.deleteMany({});
   await prisma.guest.deleteMany({});
@@ -177,6 +181,26 @@ async function main() {
   console.log(
     `[seed] AdminUser ${admin.email} (${admin.role}) for ${property.name}`,
   );
+
+  // Sprint 6 — one example MessageLog row so /admin/messages isn't empty on
+  // a fresh seed. Represents the magic-link Koncie sent Jane at booking
+  // confirmation (kind MAGIC_LINK, status DELIVERED).
+  const seedSentAt = new Date();
+  await prisma.messageLog.create({
+    data: {
+      guestId: guest.id,
+      bookingId: booking.id,
+      kind: MessageKind.MAGIC_LINK,
+      templateId: 'magic-link-v1',
+      recipientEmail: guest.email,
+      subject: `Your Koncie account for ${property.name} is ready`,
+      status: MessageStatus.DELIVERED,
+      providerMessageId: `seed-${crypto.randomUUID()}`,
+      sentAt: seedSentAt,
+      deliveredAt: seedSentAt,
+    },
+  });
+  console.log('[seed] Seed MessageLog row inserted for Jane Demo');
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
   console.log('\n✨ Seed complete.\n');

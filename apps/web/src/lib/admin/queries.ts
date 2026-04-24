@@ -1,4 +1,4 @@
-import type { BookingStatus } from '@prisma/client';
+import type { BookingStatus, MessageKind, MessageStatus } from '@prisma/client';
 import { prisma } from '@/lib/db/prisma';
 
 /** A row in the admin guests list. Aggregated across the guest's bookings. */
@@ -343,6 +343,58 @@ export async function computeRevenueKpis(
     insuranceAttachRate: insurancePoliciesTotal / denom,
     flightAttachRate: flightBookings / denom,
   };
+}
+
+/** A row in the admin messages list. Sprint 6 — Resend-sent transactional audit. */
+export type AdminMessageRow = {
+  id: string;
+  createdAt: Date;
+  guestEmail: string | null;
+  guestName: string | null;
+  kind: MessageKind;
+  subject: string;
+  status: MessageStatus;
+  deliveredAt: Date | null;
+};
+
+/**
+ * Fetch MessageLog rows relevant to this property's admin.
+ *
+ * Tenant scoping: a log row is "visible" to a property admin when the log's
+ * guest has at least one booking at that property. Logs with no guestId
+ * (hypothetical future broadcast; none in Sprint 6) are excluded.
+ *
+ * Ordered newest-first. Capped at `limit` rows — 100 is a reasonable
+ * first-page default; pagination can come in a later sprint if the pilot
+ * needs it.
+ */
+export async function listMessagesForProperty(
+  propertyId: string,
+  limit = 100,
+): Promise<AdminMessageRow[]> {
+  const rows = await prisma.messageLog.findMany({
+    where: {
+      guest: { bookings: { some: { propertyId } } },
+    },
+    include: {
+      guest: { select: { email: true, firstName: true, lastName: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+  });
+
+  return rows.map((r) => ({
+    id: r.id,
+    createdAt: r.createdAt,
+    guestEmail: r.guest?.email ?? r.recipientEmail,
+    guestName: r.guest
+      ? `${r.guest.firstName} ${r.guest.lastName}`
+      : null,
+    kind: r.kind,
+    subject: r.subject,
+    status: r.status,
+    deliveredAt: r.deliveredAt,
+  }));
 }
 
 /**
