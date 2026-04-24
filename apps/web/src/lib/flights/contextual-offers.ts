@@ -1,3 +1,4 @@
+import type { InsuranceTier } from '@koncie/types';
 import { IATA_TO_CITY } from './iata';
 
 export interface OfferFlightInput {
@@ -9,17 +10,30 @@ export interface OfferUpsellInput {
   status: 'ACTIVE' | 'INACTIVE';
 }
 
+/** Sprint 4 — quote slice passed into the resolver. The hub page maps from Prisma rows. */
+export interface OfferInsuranceQuoteInput {
+  id: string;
+  tier: InsuranceTier;
+  premiumMinor: number;
+  currency: string;
+  coverageSummary: string;
+}
+
 export type ContextualOffer =
   | { type: 'activities-deep-link'; href: string; title: string; subtitle: string }
   | {
-      type: 'insurance-stub';
+      type: 'insurance-offer';
       destinationLabel: string;
       departureDateLabel: string;
+      quotes: OfferInsuranceQuoteInput[];
+      /** Quote id pre-selected in the UI. Sprint 4 default: Comprehensive. */
+      defaultQuoteId: string;
     };
 
 export interface ResolveInput {
   flight: OfferFlightInput | null;
   upsells: OfferUpsellInput[];
+  insuranceQuotes: OfferInsuranceQuoteInput[];
 }
 
 const FIJI_AIRPORTS = new Set(['NAN', 'SUV']);
@@ -31,7 +45,7 @@ const MONTHS = [
 
 /**
  * Format a Date as "14 Jul" in the origin's local zone. Hardcoded to
- * Australia/Sydney for the Sprint 3 pilot (all inbound flights originate AU).
+ * Australia/Sydney for the pilot (all inbound flights originate AU).
  * When a second origin zone arrives, thread the origin IATA through and
  * look up the timezone per-airport.
  */
@@ -46,7 +60,11 @@ function formatDayMonth(d: Date): string {
   return `${day} ${MONTHS[monthNum - 1]}`;
 }
 
-export function resolveContextualOffers({ flight, upsells }: ResolveInput): ContextualOffer[] {
+export function resolveContextualOffers({
+  flight,
+  upsells,
+  insuranceQuotes,
+}: ResolveInput): ContextualOffer[] {
   if (!flight) return [];
 
   const offers: ContextualOffer[] = [];
@@ -61,12 +79,18 @@ export function resolveContextualOffers({ flight, upsells }: ResolveInput): Cont
     });
   }
 
-  // insurance-stub: always when a flight exists
-  offers.push({
-    type: 'insurance-stub',
-    destinationLabel: IATA_TO_CITY[flight.destination] ?? flight.destination,
-    departureDateLabel: formatDayMonth(flight.departureAt),
-  });
+  // insurance-offer: real CoverMore-shaped quotes, Comprehensive pre-selected.
+  const defaultQuote =
+    insuranceQuotes.find((q) => q.tier === 'comprehensive') ?? insuranceQuotes[0];
+  if (defaultQuote) {
+    offers.push({
+      type: 'insurance-offer',
+      destinationLabel: IATA_TO_CITY[flight.destination] ?? flight.destination,
+      departureDateLabel: formatDayMonth(flight.departureAt),
+      quotes: insuranceQuotes,
+      defaultQuoteId: defaultQuote.id,
+    });
+  }
 
   return offers;
 }

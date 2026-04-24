@@ -39,12 +39,16 @@ export interface ChargeInput {
   koncieFeeMinor: number;
   /** Opaque Kovena token from `tokenizeCard` */
   providerToken: string;
-  /** Correlation context for ledger audit */
-  metadata: {
-    guestId: string;
-    bookingId: string;
-    upsellId: string;
-  };
+  /**
+   * Correlation context for ledger audit. Flat key/value envelope so
+   * different purchase paths (upsell, insurance, flights) can stamp their
+   * own keys without needing an overloaded signature.
+   *
+   * Expected conventions:
+   * - upsell path: `guestId`, `bookingId`, `upsellId`
+   * - insurance path (Sprint 4+): `guestId`, `quoteId`, `provider`, `providerRef`
+   */
+  metadata: Record<string, string>;
 }
 
 export type ChargeResult =

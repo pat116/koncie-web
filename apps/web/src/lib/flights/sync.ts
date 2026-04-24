@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs';
 import { prisma } from '@/lib/db/prisma';
 import { flightItinerarySource } from './provider';
 import { JetSeekerUnavailableError } from '@/lib/errors/flights';
@@ -20,8 +21,7 @@ export async function syncFlightsForGuest(guestId: string): Promise<void> {
   try {
     incoming = await flightItinerarySource.fetchBookingsForGuest(guest.email);
   } catch (err) {
-    // TODO(sprint-N): replace with Sentry.captureException(err, { extra: { guestId } })
-    console.error('[flights/sync] adapter failure', { guestId, error: err });
+    Sentry.captureException(err, { tags: { guestId, provider: 'jetseeker' } });
     if (err instanceof JetSeekerUnavailableError) throw err;
     throw new JetSeekerUnavailableError('Unexpected adapter failure', err);
   }
