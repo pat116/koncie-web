@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Pro surfing lesson">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2DC86E"/>
+      <stop offset="100%" stop-color="#001F3D"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <path d="M -50 420 Q 200 340 400 420 T 850 420 L 850 600 L -50 600 Z" fill="#F7F3E9" opacity="0.08"/>
+  <path d="M -50 470 Q 200 390 400 470 T 850 470 L 850 600 L -50 600 Z" fill="#F7F3E9" opacity="0.05"/>
+  <text x="400" y="295" fill="#F7F3E9" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="48" font-weight="700" text-anchor="middle" letter-spacing="-0.5">Pro surfing lesson</text>
+  <text x="400" y="340" fill="#F7F3E9" opacity="0.62" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="22" font-weight="500" text-anchor="middle" letter-spacing="1">NAMOTU ISLAND FIJI</text>
+</svg>

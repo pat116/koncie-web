@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Sunset sail">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#001F3D"/>
+      <stop offset="100%" stop-color="#F7F3E9"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <circle cx="650" cy="480" r="260" fill="#2DC86E" opacity="0.12"/>
+  <circle cx="170" cy="120" r="140" fill="#F7F3E9" opacity="0.10"/>
+  <text x="400" y="295" fill="#F7F3E9" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="52" font-weight="700" text-anchor="middle" letter-spacing="-0.5">Sunset sail</text>
+  <text x="400" y="340" fill="#F7F3E9" opacity="0.62" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="22" font-weight="500" text-anchor="middle" letter-spacing="1">NAMOTU ISLAND FIJI</text>
+</svg>

@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { formatMoney, formatPricePair, convertMinorUnits, computeFeeSplit, FX_RATES } from './money';
+import {
+  formatMoney,
+  formatPricePair,
+  convertMinorUnits,
+  computeFeeSplit,
+  fxRateFor,
+  FX_RATES,
+} from './money';
 
 describe('formatMoney', () => {
   it('formats FJD with proper symbol and decimals', () => {
@@ -79,6 +86,38 @@ describe('computeFeeSplit', () => {
         providerPayoutPct: '85.00',
       });
       expect(providerPayoutMinor + koncieFeeMinor).toBe(amount);
+    }
+  });
+});
+
+describe('fxRateFor', () => {
+  it('returns a 6-decimal-place string for FJD to AUD (Sprint 2 anchor rate)', () => {
+    // decimal(12,6) is the column type on Transaction.fx_rate_at_purchase
+    expect(fxRateFor('FJD', 'AUD')).toBe('0.670000');
+  });
+
+  it('returns the inverse rate for AUD to FJD', () => {
+    expect(fxRateFor('AUD', 'FJD')).toBe('1.490000');
+  });
+
+  it("returns '1.000000' for identity conversions", () => {
+    expect(fxRateFor('AUD', 'AUD')).toBe('1.000000');
+    expect(fxRateFor('FJD', 'FJD')).toBe('1.000000');
+  });
+
+  it('throws when no FX rate is configured for the requested pair', () => {
+    // JPY is intentionally absent from FX_RATES in Sprint 2
+    expect(() => fxRateFor('JPY', 'AUD')).toThrow(/no FX rate/i);
+  });
+
+  it('always returns exactly 6 decimal places', () => {
+    for (const rate of [
+      fxRateFor('FJD', 'AUD'),
+      fxRateFor('AUD', 'NZD'),
+      fxRateFor('USD', 'USD'),
+    ]) {
+      const [, fractional] = rate.split('.');
+      expect(fractional).toHaveLength(6);
     }
   });
 });
