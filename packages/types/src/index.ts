@@ -6,3 +6,4 @@ export * from './transaction.js';
 export * from './partner-adapter.js';
 export * from './payments.js';
 export * from './flights.js';
+export * from './insurance.js';

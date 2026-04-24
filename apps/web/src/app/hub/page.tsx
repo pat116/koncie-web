@@ -1,8 +1,11 @@
+import type { InsuranceTier } from '@koncie/types';
 import { prisma } from '@/lib/db/prisma';
 import { requireSignedInGuest } from '@/lib/auth/session';
 import { syncFlightsForGuest } from '@/lib/flights/sync';
+import { syncInsuranceQuotesForGuest } from '@/lib/insurance/quote';
 import { resolveContextualOffers } from '@/lib/flights/contextual-offers';
 import { JetSeekerUnavailableError } from '@/lib/errors/flights';
+import { CoverMoreUnavailableError } from '@/lib/errors/insurance';
 import { BookingHero } from '@/components/hub/booking-hero';
 import { AddonsSection } from '@/components/hub/addons-section';
 import { ActivityCard } from '@/components/activities/activity-card';
@@ -10,6 +13,12 @@ import { SectionCard } from '@/components/hub/section-card';
 import { FlightItineraryCard } from '@/components/hub/flight-itinerary-card';
 import { ContextualOffersSection } from '@/components/hub/contextual-offers-section';
 import Link from 'next/link';
+
+const PRISMA_TIER_TO_PORT: Record<string, InsuranceTier> = {
+  ESSENTIALS: 'essentials',
+  COMPREHENSIVE: 'comprehensive',
+  COMPREHENSIVE_PLUS: 'comprehensive_plus',
+};
 
 export const dynamic = 'force-dynamic';
 
@@ -40,7 +49,24 @@ export default async function HubPage() {
     }
   }
 
-  const [upsells, transactions, flights] = await Promise.all([
+  // Sprint 4 — lazy-sync CoverMore insurance quotes off the guest's flight.
+  // Same 60s staleness window; soft-fail (no offer card) on adapter outage.
+  const existingInsuranceCount = await prisma.insuranceQuote.count({
+    where: { guestId: guest.id },
+  });
+  const insuranceStaleWindowPassed =
+    guest.insuranceLastSyncedAt == null ||
+    Date.now() - guest.insuranceLastSyncedAt.getTime() > LAZY_SYNC_WINDOW_MS;
+  if (existingInsuranceCount === 0 && insuranceStaleWindowPassed) {
+    try {
+      await syncInsuranceQuotesForGuest(guest.id);
+    } catch (err) {
+      if (!(err instanceof CoverMoreUnavailableError)) throw err;
+      // Soft-fail: the offer card simply doesn't render.
+    }
+  }
+
+  const [upsells, transactions, flights, insuranceQuotes] = await Promise.all([
     prisma.upsell.findMany({
       where: { propertyId: booking.propertyId, status: 'ACTIVE' },
       orderBy: { priceMinor: 'asc' },
@@ -54,6 +80,10 @@ export default async function HubPage() {
     prisma.flightBooking.findMany({
       where: { guestId: guest.id },
       orderBy: { departureAt: 'asc' },
+    }),
+    prisma.insuranceQuote.findMany({
+      where: { guestId: guest.id, expiresAt: { gt: new Date() }, policy: null },
+      orderBy: { premiumMinor: 'asc' },
     }),
   ]);
 
@@ -72,6 +102,13 @@ export default async function HubPage() {
       ? { destination: firstFlight.destination, departureAt: firstFlight.departureAt }
       : null,
     upsells: activeUpsellsAny.map((u) => ({ status: u.status })),
+    insuranceQuotes: insuranceQuotes.map((q) => ({
+      id: q.id,
+      tier: PRISMA_TIER_TO_PORT[q.tier] ?? 'comprehensive',
+      premiumMinor: q.premiumMinor,
+      currency: q.currency,
+      coverageSummary: q.coverageSummary,
+    })),
   });
 
   return (

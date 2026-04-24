@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { ContextualOffer } from '@/lib/flights/contextual-offers';
+import { InsuranceOfferCard } from './insurance-offer-card';
 
 interface ContextualOffersSectionProps {
   offers: ContextualOffer[];
@@ -23,17 +24,15 @@ export function ContextualOffersSection({ offers }: ContextualOffersSectionProps
             </Link>
           );
         }
-        // insurance-stub
+        // insurance-offer
         return (
-          <div
+          <InsuranceOfferCard
             key={i}
-            className="rounded-xl border border-koncie-border bg-white px-4 py-3 text-sm"
-          >
-            <p className="font-semibold text-koncie-navy">Travel protection &middot; Coming soon</p>
-            <p className="text-[11px] text-koncie-charcoal/70">
-              Covers your {offer.departureDateLabel} flight to {offer.destinationLabel}
-            </p>
-          </div>
+            destinationLabel={offer.destinationLabel}
+            departureDateLabel={offer.departureDateLabel}
+            quotes={offer.quotes}
+            defaultQuoteId={offer.defaultQuoteId}
+          />
         );
       })}
     </div>

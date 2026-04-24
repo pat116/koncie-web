@@ -91,19 +91,22 @@ model Property {
 }
 
 model Guest {
-  id                  String          @id @default(uuid()) @db.Uuid
-  email               String          @unique
-  firstName           String          @map("first_name")
-  lastName            String          @map("last_name")
-  authUserId          String?         @unique @map("auth_user_id") @db.Uuid
-  claimedAt           DateTime?       @map("claimed_at")
-  bookings            Booking[]
-  transactions        Transaction[]
-  savedCards          SavedCard[]
-  flightBookings      FlightBooking[]
-  flightsLastSyncedAt DateTime?       @map("flights_last_synced_at") @db.Timestamptz
-  createdAt           DateTime        @default(now()) @map("created_at")
-  updatedAt           DateTime        @updatedAt @map("updated_at")
+  id                    String            @id @default(uuid()) @db.Uuid
+  email                 String            @unique
+  firstName             String            @map("first_name")
+  lastName              String            @map("last_name")
+  authUserId            String?           @unique @map("auth_user_id") @db.Uuid
+  claimedAt             DateTime?         @map("claimed_at")
+  bookings              Booking[]
+  transactions          Transaction[]
+  savedCards            SavedCard[]
+  flightBookings        FlightBooking[]
+  flightsLastSyncedAt   DateTime?         @map("flights_last_synced_at") @db.Timestamptz
+  insuranceQuotes       InsuranceQuote[]
+  insurancePolicies     InsurancePolicy[]
+  insuranceLastSyncedAt DateTime?         @map("insurance_last_synced_at") @db.Timestamptz
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
 
   @@map("guests")
 }
@@ -151,15 +154,16 @@ model Upsell {
 }
 
 model TrustLedgerEntry {
-  id             String               @id @default(uuid()) @db.Uuid
-  transaction    Transaction?
-  eventType      TrustLedgerEventType @map("event_type")
-  amountMinor    Int                  @map("amount_minor")
-  currency       String               @db.Char(3)
-  trustAccountId String               @map("trust_account_id")
-  externalRef    String?              @map("external_ref")
-  occurredAt     DateTime             @map("occurred_at") @db.Timestamptz
-  createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz
+  id              String               @id @default(uuid()) @db.Uuid
+  transaction     Transaction?
+  insurancePolicy InsurancePolicy?
+  eventType       TrustLedgerEventType @map("event_type")
+  amountMinor     Int                  @map("amount_minor")
+  currency        String               @db.Char(3)
+  trustAccountId  String               @map("trust_account_id")
+  externalRef     String?              @map("external_ref")
+  occurredAt      DateTime             @map("occurred_at") @db.Timestamptz
+  createdAt       DateTime             @default(now()) @map("created_at") @db.Timestamptz
 
   @@index([trustAccountId, occurredAt])
   @@map("trust_ledger_entries")
@@ -220,20 +224,91 @@ model Transaction {
 // ─── Sprint 3 models ─────────────────────────────────────────────────────────
 
 model FlightBooking {
-  id             String    @id @default(uuid()) @db.Uuid
-  guestId        String    @map("guest_id") @db.Uuid
-  guest          Guest     @relation(fields: [guestId], references: [id])
-  externalRef    String    @map("external_ref")
-  origin         String    @db.Char(3)
-  destination    String    @db.Char(3)
-  departureAt    DateTime  @map("departure_at") @db.Timestamptz
-  returnAt       DateTime? @map("return_at") @db.Timestamptz
-  carrier        String    @db.Char(2)
-  metadata       Json      @default("{}")
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  id              String           @id @default(uuid()) @db.Uuid
+  guestId         String           @map("guest_id") @db.Uuid
+  guest           Guest            @relation(fields: [guestId], references: [id])
+  externalRef     String           @map("external_ref")
+  origin          String           @db.Char(3)
+  destination     String           @db.Char(3)
+  departureAt     DateTime         @map("departure_at") @db.Timestamptz
+  returnAt        DateTime?        @map("return_at") @db.Timestamptz
+  carrier         String           @db.Char(2)
+  metadata        Json             @default("{}")
+  insuranceQuotes InsuranceQuote[]
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz
 
   @@unique([guestId, externalRef])
   @@index([guestId, departureAt])
   @@map("flight_bookings")
+}
+
+// ─── Sprint 4 models ─────────────────────────────────────────────────────────
+
+enum InsuranceTier {
+  ESSENTIALS
+  COMPREHENSIVE
+  COMPREHENSIVE_PLUS
+}
+
+enum InsurancePolicyStatus {
+  PENDING
+  ACTIVE
+  FAILED
+  CANCELLED
+}
+
+model InsuranceQuote {
+  id              String           @id @default(uuid()) @db.Uuid
+  guestId         String           @map("guest_id") @db.Uuid
+  guest           Guest            @relation(fields: [guestId], references: [id])
+  flightBookingId String?          @map("flight_booking_id") @db.Uuid
+  flightBooking   FlightBooking?   @relation(fields: [flightBookingId], references: [id])
+  provider        String // e.g. "CoverMore"
+  providerRef     String           @map("provider_ref")
+  tier            InsuranceTier
+  premiumMinor    Int              @map("premium_minor")
+  currency        String           @db.Char(3)
+  /// Decimal(5,2) — e.g. 30.00 = Koncie keeps 30%
+  commissionPct   Decimal          @map("commission_pct") @db.Decimal(5, 2)
+  commissionMinor Int              @map("commission_minor")
+  coverageSummary String           @map("coverage_summary")
+  metadata        Json             @default("{}")
+  expiresAt       DateTime         @map("expires_at") @db.Timestamptz
+  policy          InsurancePolicy?
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([guestId, providerRef])
+  @@index([guestId, expiresAt])
+  @@index([flightBookingId])
+  @@map("insurance_quotes")
+}
+
+model InsurancePolicy {
+  id                  String                @id @default(uuid()) @db.Uuid
+  quoteId             String                @unique @map("quote_id") @db.Uuid
+  quote               InsuranceQuote        @relation(fields: [quoteId], references: [id])
+  guestId             String                @map("guest_id") @db.Uuid
+  guest               Guest                 @relation(fields: [guestId], references: [id])
+  /// Always '4722' — enforced by CHECK in migration
+  mcc                 String                @db.Char(4)
+  status              InsurancePolicyStatus
+  amountMinor         Int                   @map("amount_minor")
+  currency            String                @db.Char(3)
+  providerPayoutMinor Int                   @map("provider_payout_minor")
+  koncieFeeMinor      Int                   @map("koncie_fee_minor")
+  paymentProvider     PaymentProviderName   @map("payment_provider")
+  providerPaymentRef  String                @map("provider_payment_ref")
+  trustLedgerId       String?               @unique @map("trust_ledger_id") @db.Uuid
+  trustLedgerEntry    TrustLedgerEntry?     @relation(fields: [trustLedgerId], references: [id])
+  policyNumber        String?               @map("policy_number")
+  capturedAt          DateTime?             @map("captured_at") @db.Timestamptz
+  failureReason       String?               @map("failure_reason")
+  createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime              @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([guestId, capturedAt])
+  @@index([providerPaymentRef])
+  @@map("insurance_policies")
 }
