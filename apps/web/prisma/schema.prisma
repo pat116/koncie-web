@@ -106,6 +106,7 @@ model Guest {
   insuranceQuotes       InsuranceQuote[]
   insurancePolicies     InsurancePolicy[]
   insuranceLastSyncedAt DateTime?         @map("insurance_last_synced_at") @db.Timestamptz
+  messageLogs           MessageLog[]
   createdAt             DateTime          @default(now()) @map("created_at")
   updatedAt             DateTime          @updatedAt @map("updated_at")
 
@@ -124,6 +125,7 @@ model Booking {
   numGuests    Int           @map("num_guests")
   status       BookingStatus
   transactions Transaction[]
+  messageLogs  MessageLog[]
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
 
@@ -339,4 +341,52 @@ model AdminUser {
 
   @@index([propertyId])
   @@map("admin_users")
+}
+
+// ─── Sprint 6 models ─────────────────────────────────────────────────────────
+
+enum MessageKind {
+  MAGIC_LINK
+  UPSELL_REMINDER_T7
+  INSURANCE_REMINDER_T3
+  INSURANCE_RECEIPT
+  OTHER
+}
+
+enum MessageStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  BOUNCED
+  COMPLAINED
+  FAILED
+}
+
+/// Audit log of every transactional email Koncie sends. One row per send
+/// (not per recipient if bcc/cc, which we don't use). Status is updated by
+/// the Resend webhook at /api/resend/webhook. Tenant-scoped for the admin
+/// view via guest.bookings.some({ propertyId }).
+model MessageLog {
+  id                String        @id @default(uuid()) @db.Uuid
+  guestId           String?       @map("guest_id") @db.Uuid
+  guest             Guest?        @relation(fields: [guestId], references: [id])
+  bookingId         String?       @map("booking_id") @db.Uuid
+  booking           Booking?      @relation(fields: [bookingId], references: [id])
+  kind              MessageKind
+  templateId        String        @map("template_id")
+  recipientEmail    String        @map("recipient_email")
+  subject           String
+  status            MessageStatus @default(QUEUED)
+  providerMessageId String?       @unique @map("provider_message_id")
+  failureReason     String?       @map("failure_reason")
+  metadata          Json          @default("{}")
+  sentAt            DateTime?     @map("sent_at") @db.Timestamptz
+  deliveredAt       DateTime?     @map("delivered_at") @db.Timestamptz
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([guestId, createdAt])
+  @@index([bookingId, createdAt])
+  @@index([kind, status, createdAt])
+  @@map("message_logs")
 }
