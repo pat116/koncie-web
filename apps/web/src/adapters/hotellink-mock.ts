@@ -1,65 +1,91 @@
-import type {
-  PartnerAdapter,
-  ExternalBooking,
-  WebhookResult,
-} from '@koncie/types';
-import { prisma } from '@/lib/db/prisma';
+/**
+ * HotelLink webhook-payload contract (mock-first).
+ *
+ * HotelLink is Kovena-owned, so the payload shape is defined here and the
+ * real HotelLink-side emitter conforms. Sprint 7 ships the Koncie ingest
+ * loop against this schema; the HotelLink-side webhook wiring is a
+ * parallel ops track.
+ *
+ * Mirrors the Sprint 3 Jet Seeker mock-adapter pattern: a Zod schema,
+ * a domain-specific Unavailable error, and a test-helper that builds
+ * valid default payloads with override support.
+ *
+ * Supersedes the Sprint 0/1 scaffolding HotelLinkMockAdapter class —
+ * ingest now happens via `lib/hotellink/ingest.ts` driven by this
+ * payload shape.
+ */
+import { z } from 'zod';
+
+export const hotelLinkWebhookPayloadSchema = z.object({
+  bookingRef: z.string().min(1),
+  propertySlug: z.string().min(1),
+  guest: z.object({
+    email: z.string().email(),
+    firstName: z.string().min(1),
+    lastName: z.string().min(1),
+  }),
+  checkIn: z.string().datetime(),
+  checkOut: z.string().datetime(),
+  numGuests: z.number().int().min(1),
+  status: z.enum(['CONFIRMED', 'CANCELLED', 'COMPLETED']),
+});
+
+export type HotelLinkWebhookPayload = z.infer<typeof hotelLinkWebhookPayloadSchema>;
 
 /**
- * Mock HotelLink adapter — reads from our own DB and reshapes into the
- * `ExternalBooking` wire format that a real HotelLink HTTP call would return.
- *
- * Replaced by a real HTTP adapter in Sprint 7. `PartnerAdapter` is stable;
- * the app never imports this class directly, only the port.
+ * Infra-broken error for HotelLink integration failures (timeout, 5xx,
+ * auth). Mirrors JetSeekerUnavailableError / CoverMoreUnavailableError.
+ * Business outcomes (unknown property) are not this error.
  */
-export class HotelLinkMockAdapter implements PartnerAdapter {
-  async listBookings(propertySlug: string): Promise<ExternalBooking[]> {
-    const bookings = await prisma.booking.findMany({
-      where: { property: { slug: propertySlug } },
-      include: { guest: true, property: true },
-    });
-    return bookings.map(toExternal);
-  }
-
-  async getBooking(externalRef: string): Promise<ExternalBooking | null> {
-    const booking = await prisma.booking.findUnique({
-      where: { externalRef },
-      include: { guest: true, property: true },
-    });
-    return booking ? toExternal(booking) : null;
-  }
-
-  async onWebhook(): Promise<WebhookResult> {
-    // Sprint 7 replaces this with real payload parsing + HMAC verification.
-    return {
-      accepted: false,
-      reason: 'mock adapter does not accept webhooks',
-    };
+export class HotelLinkUnavailableError extends Error {
+  constructor(message: string, readonly cause?: unknown) {
+    super(message);
+    this.name = 'HotelLinkUnavailableError';
   }
 }
 
-type BookingWithRelations = {
-  externalRef: string;
-  checkIn: Date;
-  checkOut: Date;
-  numGuests: number;
-  status: 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
-  guest: { email: string; firstName: string; lastName: string };
-  property: { slug: string };
+const FAIL_TRIGGER_EMAIL = 'hotellink-unavailable@test.com';
+
+const DEFAULT_PAYLOAD: HotelLinkWebhookPayload = {
+  bookingRef: 'HL-NAMOTU-0001',
+  propertySlug: 'namotu-island-fiji',
+  guest: {
+    email: 'pat@kovena.com',
+    firstName: 'Jane',
+    lastName: 'Demo',
+  },
+  checkIn: '2026-08-04T00:00:00.000Z',
+  checkOut: '2026-08-11T00:00:00.000Z',
+  numGuests: 2,
+  status: 'CONFIRMED',
 };
 
-function toExternal(b: BookingWithRelations): ExternalBooking {
-  return {
-    externalRef: b.externalRef,
-    propertySlug: b.property.slug,
-    guest: {
-      email: b.guest.email,
-      firstName: b.guest.firstName,
-      lastName: b.guest.lastName,
-    },
-    checkIn: b.checkIn,
-    checkOut: b.checkOut,
-    numGuests: b.numGuests,
-    status: b.status,
+export type MockPayloadOverrides = Partial<Omit<HotelLinkWebhookPayload, 'guest'>> & {
+  guest?: Partial<HotelLinkWebhookPayload['guest']>;
+};
+
+/**
+ * Builds a valid HotelLinkWebhookPayload. Deep-merges the `guest` object
+ * so callers can override individual fields without restating the whole
+ * nested shape.
+ *
+ * Throws HotelLinkUnavailableError if the resolved email matches the
+ * reserved fail-trigger address — lets tests exercise the outage path
+ * through the same surface real payloads flow through.
+ */
+export function mockHotelLinkWebhookPayload(
+  overrides: MockPayloadOverrides = {},
+): HotelLinkWebhookPayload {
+  const { guest: guestOverrides, ...rest } = overrides;
+  const merged: HotelLinkWebhookPayload = {
+    ...DEFAULT_PAYLOAD,
+    ...rest,
+    guest: { ...DEFAULT_PAYLOAD.guest, ...guestOverrides },
   };
+  if (merged.guest.email === FAIL_TRIGGER_EMAIL) {
+    throw new HotelLinkUnavailableError(
+      'HotelLink mock adapter simulated outage (fail-trigger email)',
+    );
+  }
+  return merged;
 }

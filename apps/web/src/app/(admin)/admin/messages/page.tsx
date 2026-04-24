@@ -9,6 +9,7 @@ const KIND_LABEL: Record<MessageKind, string> = {
   UPSELL_REMINDER_T7: 'Upsell T-7',
   INSURANCE_REMINDER_T3: 'Insurance T-3',
   INSURANCE_RECEIPT: 'Insurance Receipt',
+  HOTEL_BOOKING_CONFIRMED: 'Hotel Confirmed',
   OTHER: 'Other',
 };
 
