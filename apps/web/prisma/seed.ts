@@ -1,4 +1,9 @@
-import { PrismaClient, PartnerType, BookingStatus } from '@prisma/client';
+import {
+  PrismaClient,
+  PartnerType,
+  BookingStatus,
+  AdminRole,
+} from '@prisma/client';
 import { signMagicLink } from '../src/lib/auth/signed-link';
 
 const prisma = new PrismaClient();
@@ -13,6 +18,7 @@ async function main() {
   // Hard reset for idempotent dev seeding. Delete in FK-safe order.
   // Safe because this is a dev/preview-only script — Production is guarded
   // by the VERCEL_ENV check above.
+  await prisma.adminUser.deleteMany({});
   await prisma.booking.deleteMany({});
   await prisma.guest.deleteMany({});
   await prisma.property.deleteMany({});
@@ -154,11 +160,31 @@ async function main() {
   });
   console.log('[seed] Jane\'s SYD↔NAN flight inserted');
 
+  // Sprint 5 — one seeded hotel_admin for Namotu Island Fiji.
+  // Override via `KONCIE_SEED_ADMIN_EMAIL` during dev so Supabase can deliver
+  // the magic link to a real inbox. Defaults to the demo placeholder.
+  const adminEmail =
+    process.env.KONCIE_SEED_ADMIN_EMAIL ?? 'admin.namotu@koncie.app';
+  const admin = await prisma.adminUser.create({
+    data: {
+      email: adminEmail,
+      propertyId: property.id,
+      role: AdminRole.HOTEL_ADMIN,
+      firstName: 'Namotu',
+      lastName: 'Admin',
+    },
+  });
+  console.log(
+    `[seed] AdminUser ${admin.email} (${admin.role}) for ${property.name}`,
+  );
+
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
   console.log('\n✨ Seed complete.\n');
   console.log(`Guest: ${guest.firstName} ${guest.lastName} <${guest.email}>`);
-  console.log('\nSigned magic link:');
+  console.log(`Admin: ${admin.firstName} ${admin.lastName} <${admin.email}>`);
+  console.log('\nSigned magic link (guest):');
   console.log(`${baseUrl}/welcome?token=${token}\n`);
+  console.log('Admin sign-in: use magic link flow at /welcome with the admin email.\n');
 }
 
 main()
