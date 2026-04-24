@@ -83,7 +83,7 @@ async function main() {
         priceMinor: 7500,
         priceCurrency: 'FJD',
         providerPayoutPct: '85.00',
-        imageUrl: '/images/upsells/snorkel.jpg',
+        imageUrl: '/images/upsells/snorkel.svg',
       },
       {
         propertyId: property.id,
@@ -94,7 +94,7 @@ async function main() {
         priceMinor: 12500,
         priceCurrency: 'FJD',
         providerPayoutPct: '85.00',
-        imageUrl: '/images/upsells/sunset-sail.jpg',
+        imageUrl: '/images/upsells/sunset-sail.svg',
       },
       {
         propertyId: property.id,
@@ -105,7 +105,7 @@ async function main() {
         priceMinor: 18000,
         priceCurrency: 'FJD',
         providerPayoutPct: '85.00',
-        imageUrl: '/images/upsells/spa.jpg',
+        imageUrl: '/images/upsells/spa.svg',
       },
       {
         propertyId: property.id,
@@ -116,7 +116,7 @@ async function main() {
         priceMinor: 22000,
         priceCurrency: 'FJD',
         providerPayoutPct: '85.00',
-        imageUrl: '/images/upsells/surf-lesson.jpg',
+        imageUrl: '/images/upsells/surf-lesson.svg',
       },
       {
         propertyId: property.id,
@@ -127,7 +127,7 @@ async function main() {
         priceMinor: 9500,
         priceCurrency: 'FJD',
         providerPayoutPct: '85.00',
-        imageUrl: '/images/upsells/village-tour.jpg',
+        imageUrl: '/images/upsells/village-tour.svg',
       },
     ],
   });
