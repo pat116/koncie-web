@@ -10,6 +10,7 @@ import { magicLinkTemplate } from './magic-link';
 import { upsellReminderT7Template } from './upsell-reminder-t7';
 import { insuranceReminderT3Template } from './insurance-reminder-t3';
 import { insuranceReceiptTemplate } from './insurance-receipt';
+import { hotelBookingConfirmedTemplate } from './hotel-booking-confirmed';
 
 // The registry holds heterogeneous var shapes; the caller narrows at send-time.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -18,6 +19,7 @@ const registry: Record<string, MessageTemplate<any>> = {
   [upsellReminderT7Template.id]: upsellReminderT7Template,
   [insuranceReminderT3Template.id]: insuranceReminderT3Template,
   [insuranceReceiptTemplate.id]: insuranceReceiptTemplate,
+  [hotelBookingConfirmedTemplate.id]: hotelBookingConfirmedTemplate,
 };
 
 export function getTemplate(templateId: string): MessageTemplate<unknown> {
@@ -32,4 +34,5 @@ export { magicLinkTemplate } from './magic-link';
 export { upsellReminderT7Template } from './upsell-reminder-t7';
 export { insuranceReminderT3Template } from './insurance-reminder-t3';
 export { insuranceReceiptTemplate } from './insurance-receipt';
+export { hotelBookingConfirmedTemplate } from './hotel-booking-confirmed';
 export type { MessageTemplate } from './types';
