@@ -1,17 +1,46 @@
 import { prisma } from '@/lib/db/prisma';
 import { requireSignedInGuest } from '@/lib/auth/session';
+import { syncFlightsForGuest } from '@/lib/flights/sync';
+import { resolveContextualOffers } from '@/lib/flights/contextual-offers';
+import { JetSeekerUnavailableError } from '@/lib/errors/flights';
 import { BookingHero } from '@/components/hub/booking-hero';
 import { AddonsSection } from '@/components/hub/addons-section';
 import { ActivityCard } from '@/components/activities/activity-card';
 import { SectionCard } from '@/components/hub/section-card';
+import { FlightItineraryCard } from '@/components/hub/flight-itinerary-card';
+import { ContextualOffersSection } from '@/components/hub/contextual-offers-section';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
+const LAZY_SYNC_WINDOW_MS = 60_000;
+
 export default async function HubPage() {
   const { guest, booking } = await requireSignedInGuest();
 
-  const [upsells, transactions] = await Promise.all([
+  // Sprint 3 — Lazy-sync flights from Jet Seeker. If we've never synced OR last
+  // sync > 60s ago AND no flights cached, fetch from adapter. Soft-fail: adapter
+  // errors render a banner but don't block the rest of the hub.
+  let syncFailed = false;
+  const existingFlightCount = await prisma.flightBooking.count({
+    where: { guestId: guest.id },
+  });
+  const staleWindowPassed =
+    guest.flightsLastSyncedAt == null ||
+    Date.now() - guest.flightsLastSyncedAt.getTime() > LAZY_SYNC_WINDOW_MS;
+  if (existingFlightCount === 0 && staleWindowPassed) {
+    try {
+      await syncFlightsForGuest(guest.id);
+    } catch (err) {
+      if (err instanceof JetSeekerUnavailableError) {
+        syncFailed = true;
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  const [upsells, transactions, flights] = await Promise.all([
     prisma.upsell.findMany({
       where: { propertyId: booking.propertyId, status: 'ACTIVE' },
       orderBy: { priceMinor: 'asc' },
@@ -22,7 +51,28 @@ export default async function HubPage() {
       include: { upsell: true },
       orderBy: { createdAt: 'desc' },
     }),
+    prisma.flightBooking.findMany({
+      where: { guestId: guest.id },
+      orderBy: { departureAt: 'asc' },
+    }),
   ]);
+
+  const firstFlight = flights[0] ?? null;
+
+  // For offer resolution we need the destination + an indication that ACTIVE
+  // upsells exist at the property. Query those separately (not filtered to 2).
+  const activeUpsellsAny = await prisma.upsell.findMany({
+    where: { propertyId: booking.propertyId, status: 'ACTIVE' },
+    select: { status: true },
+    take: 1,
+  });
+
+  const offers = resolveContextualOffers({
+    flight: firstFlight
+      ? { destination: firstFlight.destination, departureAt: firstFlight.departureAt }
+      : null,
+    upsells: activeUpsellsAny.map((u) => ({ status: u.status })),
+  });
 
   return (
     <div className="px-5 pt-5">
@@ -32,6 +82,14 @@ export default async function HubPage() {
         checkOut={booking.checkOut}
         numGuests={booking.numGuests}
       />
+
+      {firstFlight ? (
+        <FlightItineraryCard flight={firstFlight} />
+      ) : syncFailed ? (
+        <section className="mt-2 rounded-2xl border border-koncie-border bg-koncie-sand px-5 py-4 text-sm text-koncie-charcoal">
+          We couldn&apos;t reach your flight details right now. Try refreshing in a minute.
+        </section>
+      ) : null}
 
       <AddonsSection
         rows={transactions.map((t) => ({
@@ -82,14 +140,7 @@ export default async function HubPage() {
         </div>
       )}
 
-      <div className="mt-3 space-y-3">
-        <SectionCard icon="🛡️" title="Travel protection" subtitle="Coming soon" />
-        <SectionCard
-          icon="✈️"
-          title="Flight add-ons"
-          subtitle="Coming soon · via JetSeeker"
-        />
-      </div>
+      <ContextualOffersSection offers={offers} />
     </div>
   );
 }

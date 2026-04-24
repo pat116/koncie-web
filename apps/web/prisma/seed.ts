@@ -133,6 +133,27 @@ async function main() {
   });
   console.log('[seed] 5 Namotu upsells inserted');
 
+  // Sprint 3 — Jane's flight itinerary (Sydney → Nadi for Namotu stay)
+  await prisma.flightBooking.deleteMany({ where: { guestId: guest.id } });
+  await prisma.flightBooking.create({
+    data: {
+      guestId: guest.id,
+      externalRef: 'JS-JANE-NAMOTU-01',
+      origin: 'SYD',
+      destination: 'NAN',
+      departureAt: new Date('2026-07-14T08:00:00+10:00'),
+      returnAt: new Date('2026-07-21T14:30:00+12:00'),
+      carrier: 'FJ',
+      metadata: { adults: 2, class: 'economy' },
+    },
+  });
+  // Reset lazy-sync watermark so the hub will re-sync on first render if desired.
+  await prisma.guest.update({
+    where: { id: guest.id },
+    data: { flightsLastSyncedAt: null },
+  });
+  console.log('[seed] Jane\'s SYD↔NAN flight inserted');
+
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
   console.log('\n✨ Seed complete.\n');
   console.log(`Guest: ${guest.firstName} ${guest.lastName} <${guest.email}>`);

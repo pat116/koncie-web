@@ -153,3 +153,31 @@ Adding them ahead of time would produce migrations we'd regret when the shape of
 | `last4` | char(4) | |
 | `expiry_month`, `expiry_year` | int | |
 | `is_default` | boolean | partial unique index `(guest_id) WHERE is_default = true` |
+
+## Sprint 3 additions
+
+### FlightBooking
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | uuid (pk) | |
+| `guest_id` | uuid (fk → Guest) | |
+| `external_ref` | text | Jet Seeker PNR; unique per guest |
+| `origin` | char(3) | IATA airport code |
+| `destination` | char(3) | IATA airport code |
+| `departure_at` | timestamptz | |
+| `return_at` | timestamptz (nullable) | null for one-way |
+| `carrier` | char(2) | IATA airline code |
+| `metadata` | jsonb | adapter-specific fields |
+| `created_at`, `updated_at` | timestamptz | |
+
+**Indexes:**
+
+- `UNIQUE (guest_id, external_ref)` — idempotent upsert key; prevents duplicates on re-sync
+- `(guest_id, departure_at)` — hub query shape
+
+No CHECK constraints — nothing MoR-load-bearing (those stay in `transactions`).
+
+### Guest (column added)
+
+- `flights_last_synced_at` — timestamptz, nullable. Debounce anchor for the 60-second lazy-sync rule on `/hub`. Updated on successful `syncFlightsForGuest`; unchanged on adapter failure.

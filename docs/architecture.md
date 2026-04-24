@@ -89,3 +89,28 @@ Sprint 2 adds the `PaymentProvider` port alongside the Sprint 1 `PartnerAdapter`
 **Key rule.** Nothing under `app/hub/checkout/*` imports the adapter directly. All traffic goes through the DI module. Sprint 3 swaps the exported instance in one line.
 
 **Merchant-of-Record posture.** Every Transaction row carries `mcc='4722'`, a fee split (`amount_minor = provider_payout_minor + koncie_fee_minor`), and a 1:1 reference to a `TrustLedgerEntry` on capture. These invariants are enforced by Postgres CHECK constraints — see `docs/mor-compliance.md`.
+
+## Flights (Sprint 3+)
+
+Sprint 3 adds the `FlightItinerarySource` port alongside Sprint 1's `PartnerAdapter` and Sprint 2's `PaymentProvider`.
+
+```
+[ app/hub/page.tsx ]
+        │  (lazy-sync on render, 60s debounce)
+        ▼
+[ lib/flights/sync.ts ]  ← syncFlightsForGuest
+        │
+        ▼
+[ lib/flights/provider.ts ]  ← DI boundary
+        │
+        ▼
+[ FlightItinerarySource interface ]  (packages/types/src/flights.ts)
+        │
+        ▼
+[ JetSeekerMockAdapter ]  (Sprint 3)
+[ JetSeekerLiveAdapter ]  (Sprint-N — not yet written)
+```
+
+**Key rule.** Hub renders from `FlightBooking` in Postgres; the adapter is only called via the ingestion service, never on the render hot-path. Same discipline as Sprint 2's payment flow.
+
+**Contextual offers.** A pure function (`lib/flights/contextual-offers.ts`) maps `(flight, upsells) → ContextualOffer[]`. Sprint 3 hardcodes two rules (Fiji-destination deep-link; always-on insurance stub); promote to a rules engine only when a third offer type competes for hub real-estate.

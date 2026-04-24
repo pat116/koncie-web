@@ -91,17 +91,19 @@ model Property {
 }
 
 model Guest {
-  id           String        @id @default(uuid()) @db.Uuid
-  email        String        @unique
-  firstName    String        @map("first_name")
-  lastName     String        @map("last_name")
-  authUserId   String?       @unique @map("auth_user_id") @db.Uuid
-  claimedAt    DateTime?     @map("claimed_at")
-  bookings     Booking[]
-  transactions Transaction[]
-  savedCards   SavedCard[]
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
+  id                  String          @id @default(uuid()) @db.Uuid
+  email               String          @unique
+  firstName           String          @map("first_name")
+  lastName            String          @map("last_name")
+  authUserId          String?         @unique @map("auth_user_id") @db.Uuid
+  claimedAt           DateTime?       @map("claimed_at")
+  bookings            Booking[]
+  transactions        Transaction[]
+  savedCards          SavedCard[]
+  flightBookings      FlightBooking[]
+  flightsLastSyncedAt DateTime?       @map("flights_last_synced_at") @db.Timestamptz
+  createdAt           DateTime        @default(now()) @map("created_at")
+  updatedAt           DateTime        @updatedAt @map("updated_at")
 
   @@map("guests")
 }
@@ -213,4 +215,25 @@ model Transaction {
   @@index([guestId, createdAt])
   @@index([providerPaymentRef])
   @@map("transactions")
+}
+
+// ─── Sprint 3 models ─────────────────────────────────────────────────────────
+
+model FlightBooking {
+  id             String    @id @default(uuid()) @db.Uuid
+  guestId        String    @map("guest_id") @db.Uuid
+  guest          Guest     @relation(fields: [guestId], references: [id])
+  externalRef    String    @map("external_ref")
+  origin         String    @db.Char(3)
+  destination    String    @db.Char(3)
+  departureAt    DateTime  @map("departure_at") @db.Timestamptz
+  returnAt       DateTime? @map("return_at") @db.Timestamptz
+  carrier        String    @db.Char(2)
+  metadata       Json      @default("{}")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([guestId, externalRef])
+  @@index([guestId, departureAt])
+  @@map("flight_bookings")
 }

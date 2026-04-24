@@ -50,3 +50,9 @@ test-results/
 
 # Vercel
 .vercel/
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Claude Code local settings
+.claude/settings.local.json
