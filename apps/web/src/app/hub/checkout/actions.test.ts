@@ -1,3 +1,9 @@
+// Mocking Prisma's generated client types in tests is intentionally loose —
+// we'd otherwise have to re-declare every model-method signature the tests
+// touch, which mocks are designed to avoid. `any` is the pragmatic shape
+// here; the real production code paths are fully typed.
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@/lib/db/prisma', () => ({ prisma: {} }));
