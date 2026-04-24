@@ -84,6 +84,7 @@ model Property {
   partnerIntegration   PartnerIntegration @relation(fields: [partnerIntegrationId], references: [id])
   bookings             Booking[]
   upsells              Upsell[]
+  adminUsers           AdminUser[]
   createdAt            DateTime           @default(now()) @map("created_at")
   updatedAt            DateTime           @updatedAt @map("updated_at")
 
@@ -311,4 +312,31 @@ model InsurancePolicy {
   @@index([guestId, capturedAt])
   @@index([providerPaymentRef])
   @@map("insurance_policies")
+}
+
+// ─── Sprint 5 models ─────────────────────────────────────────────────────────
+
+enum AdminRole {
+  HOTEL_ADMIN
+  KONCIE_STAFF
+}
+
+/// Hotel-side admin users. Separate from Guest — admins authenticate via the
+/// same Supabase identity layer (email) but their row lives here, with a
+/// tenant scope (propertyId) and a role. KONCIE_STAFF rows can optionally
+/// omit propertyId in future; for Sprint 5 MVP every admin is pinned to one.
+model AdminUser {
+  id         String    @id @default(uuid()) @db.Uuid
+  email      String    @unique
+  propertyId String    @map("property_id") @db.Uuid
+  property   Property  @relation(fields: [propertyId], references: [id])
+  role       AdminRole @default(HOTEL_ADMIN)
+  authUserId String?   @unique @map("auth_user_id") @db.Uuid
+  firstName  String    @map("first_name")
+  lastName   String    @map("last_name")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([propertyId])
+  @@map("admin_users")
 }
