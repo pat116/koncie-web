@@ -27,7 +27,7 @@ export default async function CheckoutSuccessPage({ searchParams }: Props) {
       include: { quote: true },
     });
 
-    if (!policy || policy.guestId !== guest.id || policy.status !== 'CAPTURED') {
+    if (!policy || policy.guestId !== guest.id || policy.status !== 'ACTIVE') {
       notFound();
     }
 
