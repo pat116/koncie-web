@@ -485,6 +485,16 @@ async function main() {
   // coverage). The mock currently returns 3 tiers — narrowing to one is a
   // runtime concern, not a seed-data one, so no insurance quote rows are
   // pre-seeded here. See addendum 2026-04-25 § "Insurance MVP simplification".
+  //
+  // Reset the insurance lazy-sync watermark alongside flightsLastSyncedAt
+  // (below) so the first /hub render after a seed reliably re-syncs the
+  // CoverMore mock. Without this, a stale insuranceLastSyncedAt (e.g. from
+  // a non-TRUNCATE seed path or upsert flow) keeps existingInsuranceCount === 0
+  // && staleWindowPassed from holding, and the offer card never appears.
+  await prisma.guest.update({
+    where: { id: guest.id },
+    data: { insuranceLastSyncedAt: null },
+  });
 
   // Sprint 3 — Jane's flight itinerary (Sydney → Nadi for Namotu stay)
   await prisma.flightBooking.deleteMany({ where: { guestId: guest.id } });
