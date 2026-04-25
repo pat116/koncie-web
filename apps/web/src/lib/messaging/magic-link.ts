@@ -35,8 +35,17 @@ export async function fireMagicLinkForBooking(
   });
   if (!booking) return { ok: false, reason: 'booking_not_found' };
 
+  // On preview deployments, NEXT_PUBLIC_SITE_URL points at production —
+  // sending the OTP redirect there bounces previews to prod where the
+  // booking row doesn't exist (callback_failed). Use Vercel's per-deploy
+  // VERCEL_URL on non-prod builds so the email lands back on the same
+  // preview build. VERCEL_URL is server-only and auto-injected by Vercel.
+  // Supabase's allowed-redirects list must include the matching wildcard
+  // (e.g. https://*-pat-3409s-projects.vercel.app/auth/callback).
   const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+    process.env.VERCEL_ENV !== 'production' && process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
   const supabase = createSupabaseServerClient();
   const { error } = await supabase.auth.signInWithOtp({
     email: booking.guest.email,
