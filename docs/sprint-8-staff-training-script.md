@@ -29,7 +29,7 @@ It's the trip hub for your stay with us. Kovena built it so guests can see their
 Absolutely, nothing has changed there. The desk can book any activity for you the way we always have. Koncie is just an option for guests who like to plan ahead before they fly in.
 
 **"Something's wrong with my Koncie account / I can't log in / my booking isn't showing."**
-Apologise for the hiccup, reassure them their room booking and any activities they've already paid for are absolutely safe on our side, and let them know you'll flag it with the Kovena team. Take a quick note of their name, email, and what went wrong, and pass it to the contact below. In the meantime, book whatever they need at the desk as normal — Koncie working or not, their's holiday goes ahead unaffected.
+Apologise for the hiccup, reassure them their room booking and any activities they've already paid for are absolutely safe on our side, and let them know you'll flag it with the Kovena team. Take a quick note of their name, email, and what went wrong, and pass it to the contact below. In the meantime, book whatever they need at the desk as normal — Koncie working or not, their holiday goes ahead unaffected.
 
 ## Who to contact if something breaks
 

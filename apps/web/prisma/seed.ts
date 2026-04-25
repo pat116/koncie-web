@@ -91,80 +91,22 @@ async function main() {
   //   FJD on-property — Pat to confirm the display-currency convention
   //   before pilot soft launch.
   //
-  // IMAGE PATHS are placeholders under /images/namotu/<slug>.jpg — actual
-  //   assets to be supplied by Namotu marketing pre-pilot. Do NOT hotlink
-  //   live Namotu imagery.
+  // IMAGE PATHS resolve under /images/namotu/<slug>.jpg — served from
+  //   apps/web/public/images/namotu/. These are Namotu-supplied marketing
+  //   images pulled from www.namotuislandfiji.com on 2026-04-25 for the
+  //   pilot demo; swap for Namotu-supplied production assets before any
+  //   non-pilot use.
   //
   // Schema notes / limitations encountered while seeding:
-  //  - UpsellCategory enum has no PACKAGE value, so Signature/Family/Kalama
-  //    weeks are stored as category=OTHER with metadata.kind='package'.
+  //  - UpsellCategory enum has no PACKAGE value, so Signature Series /
+  //    Family / Kalama weeks are stored as category=OTHER with
+  //    metadata.kind='package'.
   //  - Upsell has no first-class duration / provider / tags fields — those
   //    are stashed in the metadata Json column under stable keys
   //    (durationLabel, provider, tags, kind) so the UI can read them.
-  //  - The three pre-existing generic upsells (Sunset sail, Resort spa
-  //    treatment, Cultural village tour) are preserved per the "don't replace
-  //    generic demo data" rule, even though they aren't in Namotu's real
-  //    inventory list — flagged for Pat to prune later.
   await prisma.upsell.deleteMany({ where: { propertyId: property.id } });
   await prisma.upsell.createMany({
     data: [
-      // -- Pre-existing generic seed records (preserved) -----------------
-      {
-        propertyId: property.id,
-        category: 'ACTIVITY',
-        name: 'Half-day reef snorkel',
-        description:
-          'Guided boat trip to Namotu Lefts outer reef. Gear, lunch, and fresh coconuts included.',
-        priceMinor: 7500,
-        priceCurrency: 'FJD',
-        providerPayoutPct: '85.00',
-        imageUrl: '/images/upsells/snorkel.svg',
-      },
-      {
-        propertyId: property.id,
-        category: 'ACTIVITY',
-        name: 'Sunset sail',
-        description:
-          'Two-hour catamaran sail along the reef edge at golden hour. Champagne + canapés on board.',
-        priceMinor: 12500,
-        priceCurrency: 'FJD',
-        providerPayoutPct: '85.00',
-        imageUrl: '/images/upsells/sunset-sail.svg',
-      },
-      {
-        propertyId: property.id,
-        category: 'SPA',
-        name: 'Resort spa treatment',
-        description:
-          'Traditional Bobo massage, 60 minutes, in the over-water spa bure.',
-        priceMinor: 18000,
-        priceCurrency: 'FJD',
-        providerPayoutPct: '85.00',
-        imageUrl: '/images/upsells/spa.svg',
-      },
-      {
-        propertyId: property.id,
-        category: 'ACTIVITY',
-        name: 'Pro surfing lesson',
-        description:
-          '90-minute one-on-one coaching with a Namotu local pro at a beginner-friendly reef break.',
-        priceMinor: 22000,
-        priceCurrency: 'FJD',
-        providerPayoutPct: '85.00',
-        imageUrl: '/images/upsells/surf-lesson.svg',
-      },
-      {
-        propertyId: property.id,
-        category: 'ACTIVITY',
-        name: 'Cultural village tour',
-        description:
-          'Half-day visit to a nearby village with kava ceremony, meke dance, and village lunch.',
-        priceMinor: 9500,
-        priceCurrency: 'FJD',
-        providerPayoutPct: '85.00',
-        imageUrl: '/images/upsells/village-tour.svg',
-      },
-
       // -- Namotu real inventory: surf -----------------------------------
       {
         propertyId: property.id,
@@ -175,7 +117,7 @@ async function main() {
         priceMinor: 17500, // AUD 175.00 — demo pricing, confirm with property
         priceCurrency: 'AUD',
         providerPayoutPct: '85.00',
-        imageUrl: '/images/namotu/surf-coaching-group.jpg',
+        imageUrl: '/images/namotu/surfing.jpg',
         metadata: {
           provider: 'Namotu Island Fiji',
           durationLabel: '2 hours',
@@ -191,7 +133,7 @@ async function main() {
         priceMinor: 24500, // AUD 245.00 — demo pricing
         priceCurrency: 'AUD',
         providerPayoutPct: '85.00',
-        imageUrl: '/images/namotu/surf-coaching-private.jpg',
+        imageUrl: '/images/namotu/surfing.jpg',
         metadata: {
           provider: 'Namotu Island Fiji',
           durationLabel: '2 hours',
@@ -209,7 +151,7 @@ async function main() {
         priceMinor: 95000, // AUD 950.00 boat — demo pricing
         priceCurrency: 'AUD',
         providerPayoutPct: '85.00',
-        imageUrl: '/images/namotu/fishing-cobalt.jpg',
+        imageUrl: '/images/namotu/charter-fishing.jpg',
         metadata: {
           provider: 'Namotu Island Fiji',
           durationLabel: '4 hours',
@@ -226,7 +168,7 @@ async function main() {
         priceMinor: 145000, // AUD 1,450.00 boat — demo pricing
         priceCurrency: 'AUD',
         providerPayoutPct: '85.00',
-        imageUrl: '/images/namotu/fishing-obsession.jpg',
+        imageUrl: '/images/namotu/charter-fishing.jpg',
         metadata: {
           provider: 'Namotu Island Fiji',
           durationLabel: '8 hours',
@@ -416,7 +358,7 @@ async function main() {
         priceMinor: 850000, // AUD 8,500.00 pp — demo pricing, confirm
         priceCurrency: 'AUD',
         providerPayoutPct: '90.00',
-        imageUrl: '/images/namotu/signature-week.jpg',
+        imageUrl: '/images/namotu/surfing.jpg',
         metadata: {
           provider: 'Namotu Island Fiji',
           kind: 'package',
@@ -433,7 +375,7 @@ async function main() {
         priceMinor: 720000, // AUD 7,200.00 pp adult — demo pricing, confirm
         priceCurrency: 'AUD',
         providerPayoutPct: '90.00',
-        imageUrl: '/images/namotu/family-week.jpg',
+        imageUrl: '/images/namotu/fishing.jpg',
         metadata: {
           provider: 'Namotu Island Fiji',
           kind: 'package',
@@ -450,7 +392,7 @@ async function main() {
         priceMinor: 980000, // AUD 9,800.00 pp — demo pricing, confirm
         priceCurrency: 'AUD',
         providerPayoutPct: '90.00',
-        imageUrl: '/images/namotu/kalama-kamp.jpg',
+        imageUrl: '/images/namotu/foiling.jpg',
         metadata: {
           provider: 'Namotu Island Fiji',
           kind: 'package',
@@ -458,9 +400,60 @@ async function main() {
           tags: ['package', 'foil', 'clinic', 'premium'],
         },
       },
+      {
+        propertyId: property.id,
+        category: 'OTHER',
+        name: 'Fish Week',
+        description:
+          'A week dedicated to fishing — daily charters aboard Cobalt and Obsession, targeting GTs, mahi mahi, wahoo and yellowfin on the reef edge, and marlin out wide when the conditions line up. All tackle, bait, and lunch on the boat included.',
+        priceMinor: 890000, // AUD 8,900.00 pp — demo pricing, confirm
+        priceCurrency: 'AUD',
+        providerPayoutPct: '90.00',
+        imageUrl: '/images/namotu/charter-fishing.jpg',
+        metadata: {
+          provider: 'Namotu Island Fiji',
+          kind: 'package',
+          durationLabel: '7 nights',
+          tags: ['package', 'fishing', 'signature-series'],
+        },
+      },
+      {
+        propertyId: property.id,
+        category: 'OTHER',
+        name: 'Surf & Foil Week',
+        description:
+          'The ultimate surf and foil week — morning surf sessions at Cloudbreak, Restaurants and Namotu Lefts, afternoon wing and tow-foil on the inside reef. Coached progression, boat support, and video review each day.',
+        priceMinor: 920000, // AUD 9,200.00 pp — demo pricing, confirm
+        priceCurrency: 'AUD',
+        providerPayoutPct: '90.00',
+        imageUrl: '/images/namotu/foiling.jpg',
+        metadata: {
+          provider: 'Namotu Island Fiji',
+          kind: 'package',
+          durationLabel: '7 nights',
+          tags: ['package', 'surf', 'foil', 'signature-series', 'premium'],
+        },
+      },
+      {
+        propertyId: property.id,
+        category: 'OTHER',
+        name: 'Salty Goddess Week',
+        description:
+          'Namotu\'s women-only signature week — surf, SUP, yoga, and wellbeing-focused programming led by a female coach and host team. Seven nights, all meals, community-first vibe.',
+        priceMinor: 840000, // AUD 8,400.00 pp — demo pricing, confirm
+        priceCurrency: 'AUD',
+        providerPayoutPct: '90.00',
+        imageUrl: '/images/namotu/yoga.jpg',
+        metadata: {
+          provider: 'Namotu Island Fiji',
+          kind: 'package',
+          durationLabel: '7 nights',
+          tags: ['package', 'women', 'wellbeing', 'signature-series'],
+        },
+      },
     ],
   });
-  console.log('[seed] Namotu upsell catalogue inserted (5 legacy + 16 real inventory + 3 packages = 24 records)');
+  console.log('[seed] Namotu upsell catalogue inserted (16 real inventory + 6 signature packages = 22 records)');
 
   // Insurance: CoverMore quotes are produced at runtime by
   // src/adapters/covermore-mock.ts (3 tiers). MVP design calls for a single
