@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db/prisma';
 import { requireSignedInGuest } from '@/lib/auth/session';
 import { CardForm } from '@/components/checkout/card-form';
 import { SavedCardRow } from '@/components/checkout/saved-card-row';
+import { SubmitButton } from '@/components/checkout/submit-button';
 import { PricePair } from '@/components/activities/price-pair';
 import { convertMinorUnits } from '@/lib/money';
 import { purchaseUpsell } from './actions';
@@ -107,13 +108,9 @@ export default async function CheckoutPage({ searchParams }: Props) {
           </label>
         </details>
 
-        <button
-          type="submit"
-          className="mt-4 rounded-full bg-koncie-navy px-5 py-4 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-        >
-          Pay {Number(upsell.priceMinor / 100).toFixed(2)} {upsell.priceCurrency} ≈{' '}
-          {Number(guestDisplayAmountMinor / 100).toFixed(2)} AUD
-        </button>
+        <SubmitButton
+          label={`Pay ${Number(upsell.priceMinor / 100).toFixed(2)} ${upsell.priceCurrency} ≈ ${Number(guestDisplayAmountMinor / 100).toFixed(2)} AUD`}
+        />
       </form>
     </main>
   );

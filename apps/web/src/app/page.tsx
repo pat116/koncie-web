@@ -6,7 +6,7 @@ import { startDemo } from './actions';
  */
 export default function HomePage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-koncie-sand px-6 py-12">
+    <main id="main-content" tabIndex={-1} className="flex min-h-screen flex-col items-center justify-center bg-koncie-sand px-6 py-12 outline-none">
       <h1
         className="select-none text-6xl font-semibold tracking-tight sm:text-7xl"
         style={{

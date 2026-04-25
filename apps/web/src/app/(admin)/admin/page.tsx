@@ -150,7 +150,7 @@ export default async function AdminOverviewPage() {
           </h2>
           <Link
             href="/admin/alerts"
-            className="text-xs font-medium text-koncie-green hover:underline"
+            className="text-xs font-medium text-koncie-green-cta hover:underline"
           >
             View all
           </Link>

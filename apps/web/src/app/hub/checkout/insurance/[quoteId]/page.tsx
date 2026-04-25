@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db/prisma';
 import { requireSignedInGuest } from '@/lib/auth/session';
 import { CardForm } from '@/components/checkout/card-form';
 import { SavedCardRow } from '@/components/checkout/saved-card-row';
+import { SubmitButton } from '@/components/checkout/submit-button';
 import { purchaseInsurance } from '../../actions';
 
 export const dynamic = 'force-dynamic';
@@ -110,12 +111,7 @@ export default async function InsuranceCheckoutPage({ params }: Props) {
           </label>
         </details>
 
-        <button
-          type="submit"
-          className="mt-4 rounded-full bg-koncie-navy px-5 py-4 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-        >
-          Pay {premiumAud} {quote.currency}
-        </button>
+        <SubmitButton label={`Pay ${premiumAud} ${quote.currency}`} />
       </form>
     </main>
   );

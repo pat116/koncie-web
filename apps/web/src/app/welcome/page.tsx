@@ -33,7 +33,7 @@ export default async function WelcomePage({ searchParams }: PageProps) {
   }
 
   return (
-    <main className="min-h-screen bg-koncie-sand">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-koncie-sand outline-none">
       <header className="bg-koncie-navy px-5 py-4 text-center">
         <h1 className="font-semibold text-white">Koncie</h1>
       </header>
@@ -97,7 +97,7 @@ export default async function WelcomePage({ searchParams }: PageProps) {
             Already have one?{' '}
             <Link
               href={`/register?bookingId=${booking.id}&signin=true`}
-              className="text-koncie-green underline"
+              className="text-koncie-green-cta underline"
             >
               Sign in
             </Link>

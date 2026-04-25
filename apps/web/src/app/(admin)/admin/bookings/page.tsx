@@ -59,7 +59,7 @@ export default async function AdminBookingsPage() {
                         Hotel
                       </span>
                     ) : (
-                      <span className="rounded-full bg-koncie-green/15 px-2 py-0.5 text-xs font-medium text-koncie-green">
+                      <span className="rounded-full bg-koncie-green/15 px-2 py-0.5 text-xs font-medium text-koncie-green-cta">
                         Flight
                       </span>
                     )}

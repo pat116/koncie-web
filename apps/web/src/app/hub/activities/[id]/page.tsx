@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db/prisma';
 import { requireSignedInGuest } from '@/lib/auth/session';
@@ -27,10 +28,16 @@ export default async function ActivityDetailPage({ params }: Params) {
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8">
-      <div
-        className="aspect-[16/9] w-full rounded-2xl bg-koncie-sand bg-cover bg-center"
-        style={{ backgroundImage: `url(${upsell.imageUrl})` }}
-      />
+      <div className="relative aspect-[16/9] w-full overflow-hidden rounded-2xl bg-koncie-sand">
+        <Image
+          src={upsell.imageUrl}
+          alt={upsell.name}
+          fill
+          priority
+          sizes="(min-width: 768px) 672px, 100vw"
+          className="object-cover"
+        />
+      </div>
 
       <h1 className="mt-6 text-3xl font-semibold text-koncie-navy">{upsell.name}</h1>
       <p className="mt-3 text-sm leading-relaxed text-koncie-charcoal">{upsell.description}</p>

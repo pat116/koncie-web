@@ -12,6 +12,8 @@
     --koncie-navy: 210 100% 12%;
     --koncie-sand: 45 45% 94%;
     --koncie-green: 145 63% 48%;
+    /* AA-safe green for text/links on sand or white. See packages/brand/src/tokens.ts. */
+    --koncie-green-cta: 148 83% 26%;
     --koncie-white: 0 0% 100%;
     --koncie-charcoal: 0 0% 20%;
     --koncie-border: 45 30% 85%;

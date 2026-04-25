@@ -53,7 +53,7 @@ export default async function AdminAlertsPage() {
                     className={
                       a.severity === 'critical'
                         ? 'rounded-full bg-destructive/10 px-2 py-0.5 text-destructive'
-                        : 'rounded-full bg-koncie-green/15 px-2 py-0.5 text-koncie-green'
+                        : 'rounded-full bg-koncie-green/15 px-2 py-0.5 text-koncie-green-cta'
                     }
                   >
                     {SEVERITY_LABEL[a.severity]}
