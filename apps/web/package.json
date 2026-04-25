@@ -48,6 +48,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.1",
     "@koncie/config": "workspace:*",
     "@playwright/test": "^1.49.1",
     "@testcontainers/postgresql": "^10.16.0",

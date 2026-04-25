@@ -49,6 +49,8 @@ export function CardForm({ name }: CardFormProps) {
           <div className="flex gap-2">
             <input
               type="number"
+              aria-label="Expiry month"
+              autoComplete="cc-exp-month"
               min={1}
               max={12}
               value={values.expiryMonth}
@@ -56,9 +58,11 @@ export function CardForm({ name }: CardFormProps) {
               className="w-16 rounded-lg border border-koncie-border bg-white px-2 py-2 text-sm"
               required
             />
-            <span className="self-center">/</span>
+            <span aria-hidden="true" className="self-center">/</span>
             <input
               type="number"
+              aria-label="Expiry year"
+              autoComplete="cc-exp-year"
               min={2000}
               max={2100}
               value={values.expiryYear}

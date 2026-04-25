@@ -21,7 +21,7 @@ function fmtDateTime(d: Date | null): string {
 function statusPillClass(status: MessageStatus): string {
   switch (status) {
     case 'DELIVERED':
-      return 'rounded-full bg-koncie-green/15 px-2 py-0.5 text-xs font-medium text-koncie-green';
+      return 'rounded-full bg-koncie-green/15 px-2 py-0.5 text-xs font-medium text-koncie-green-cta';
     case 'SENT':
       return 'rounded-full bg-koncie-navy/10 px-2 py-0.5 text-xs font-medium text-koncie-navy';
     case 'QUEUED':

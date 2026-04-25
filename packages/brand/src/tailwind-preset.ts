@@ -16,6 +16,7 @@ const preset: Partial<Config> = {
         'koncie-navy': colors.navy,
         'koncie-sand': colors.sand,
         'koncie-green': colors.green,
+        'koncie-green-cta': colors.greenCta,
         'koncie-charcoal': colors.charcoal,
         'koncie-border': colors.border,
 

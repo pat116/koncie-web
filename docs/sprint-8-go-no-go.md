@@ -15,11 +15,11 @@ Pass/fail checklist. Each item gets a tick, an X, or a short note. Items that fa
 
 ### Accessibility
 
-- [ ] Lighthouse accessibility score ≥ 95 on `/`, `/hub`, `/sign-in`, `/welcome`, `/flights`, `/insurance`, `/checkout`, `/admin`, `/admin/messages`, `/admin/bookings`
-- [ ] Zero Axe violations of severity "serious" or "critical" across the same routes
+- [ ] Lighthouse accessibility score ≥ 95 per route — code-level audit complete (`docs/sprint-8-engineering-findings.md`); Pat to run Lighthouse against staging and tick once each route lands ≥ 95
+- [ ] Zero Axe violations of severity "serious" or "critical" — automated axe spec at `apps/web/tests/e2e/a11y.spec.ts` covers all ten routes; Pat runs `pnpm test:e2e tests/e2e/a11y.spec.ts` once locally before sign-off
 - [ ] Manual VoiceOver pass on iOS Safari for the four guest-facing routes — no journey-blocking issue
 - [ ] Manual TalkBack pass on Android Chrome for the four guest-facing routes — no journey-blocking issue
-- [ ] Brand-green CTA contrast resolved (either passes AA on koncie-sand, or restricted to large text + iconography with sign-off)
+- [x] Brand-green CTA contrast resolved — `koncie-green-cta` (`#0B7A3F`) introduced as the AA-safe text/link variant; original `#2DC86E` retained for fills + decorative use. Computation and per-route swaps in `docs/sprint-8-engineering-findings.md`. Pat to confirm the chosen hex at the review.
 
 ### Performance (Pacific mobile)
 
@@ -57,7 +57,7 @@ Bash session record:
 - [ ] `/hub` populated with the booking + property branding ("Powered by HotelLink")
 - [ ] Repeat send is idempotent — no duplicate `Booking`, no duplicate `MessageLog`
 
-If sandbox parity isn't possible this week, alternative: passing run against the Sprint 7 mock test route, with Pat's written acceptance that production sandbox parity is a 48-hour post-launch follow-up rather than a launch blocker.
+Mock-route harness ready (see §1a below); Pat to run pre-launch and tick the boxes against the live evidence. If sandbox parity isn't possible this week, alternative: passing run against the Sprint 7 mock test route, with Pat's written acceptance that production sandbox parity is a 48-hour post-launch follow-up rather than a launch blocker.
 
 ### CoverMore sandbox purchase
 
@@ -66,6 +66,8 @@ If sandbox parity isn't possible this week, alternative: passing run against the
 - [ ] FatZebra sandbox card form completes payment
 - [ ] Policy bind succeeds; policy number persisted
 - [ ] `INSURANCE_RECEIPT` email dispatched, visible in `/admin/messages` as DELIVERED
+
+Mock-route harness ready (see §1a below); Pat to run pre-launch and tick once each box has live evidence.
 
 ### Namotu seed-data realism
 
@@ -78,13 +80,63 @@ If sandbox parity isn't possible this week, alternative: passing run against the
 
 ### Engineering verification bar
 
-- [ ] `pnpm -r typecheck` green
+- [ ] `pnpm -r typecheck` green — Pat to run on the Windows side after `pnpm install` picks up `@axe-core/playwright`
 - [ ] `pnpm -r lint` green
-- [ ] `pnpm -r test` green (~144+ baseline)
+- [ ] `pnpm -r test` green (~144+ baseline; no new vitest tests added in the Sprint 8 second wave — only Playwright a11y advisory)
 - [ ] `pnpm -r build` green
+- [ ] `pnpm test:e2e tests/e2e/a11y.spec.ts` green — axe scan, advisory but expected to pass after the Sprint 8 fixes
 - [ ] No new Sentry errors of severity error or fatal in the 24 hours before review
 
 ---
+
+## 1a. Verification harness — HotelLink + CoverMore E2E
+
+The Sprint 8 brief asks for "passing run" evidence on two end-to-end flows. Neither can be exercised from the engineering sandbox (no dev server, no Resend webhook listener), so the harness below documents the exact local commands Pat runs pre-launch. Each is marked "Harness ready, Pat to run pre-launch" in the launch criteria above.
+
+### HotelLink ingest harness (mock test route)
+
+The Sprint 7 dev-only test route at `apps/web/src/app/__test__/ingest-hotellink-for-seed-guest/route.ts` runs the production ingest pipeline (`ingestHotelLinkBooking` → upsert Booking + Guest → MessageLog `MAGIC_LINK` row) without the HMAC dance. Use it to validate the end-to-end before the Kovena ops sandbox emitter is wired.
+
+```bash
+# Terminal 1 — boot the app
+cd apps/web && pnpm dev
+
+# Terminal 2 — trigger the ingest
+curl -i http://localhost:3000/__test__/ingest-hotellink-for-seed-guest
+# Expect: 303 redirect to /hub with Set-Cookie session
+
+# In a browser:
+# 1. Sign in as the seed admin: /__test__/sign-in-as-seed-admin → lands on /admin
+# 2. Open /admin/messages → expect a MAGIC_LINK row for jane.demo@... (or your KONCIE_SEED_EMAIL)
+# 3. Open /admin/bookings → expect the synthetic Namotu booking row
+# 4. Sign in as the seed guest: /__test__/sign-in-as-seed-guest → lands on /hub
+# 5. Confirm the booking-hero shows Namotu Island Fiji + the seeded check-in dates
+```
+
+If the Kovena ops HotelLink sandbox stands up before launch, replace step 2 with a real signed POST (script under `Kovena - Chief Revenue Officer/Koncie/...` ops directory), and confirm the same `/admin/messages` and `/admin/bookings` rows materialise.
+
+### CoverMore sandbox harness
+
+`apps/web/src/adapters/covermore-mock.ts` returns three deterministic tier quotes per call (Essentials AU$89, Comprehensive AU$149, Comprehensive+ AU$219), keyed off guest email + flight dates so repeated syncs upsert the same rows. The fail-trigger email `covermore-unavailable@test.com` exercises the soft-fail path.
+
+```bash
+# Terminal 1 — boot the app
+cd apps/web && pnpm dev
+
+# In a browser:
+# 1. Hit /__test__/ingest-jetseeker-for-seed-guest        (gives the seed guest a flight)
+# 2. Hit /__test__/seed-insurance-quote-for-seed-guest    (forces the three CoverMore quotes)
+# 3. Hit /__test__/sign-in-as-seed-guest                  (lands on /hub)
+# 4. On /hub, scroll to the "Travel protection · via CoverMore" card
+# 5. Click "Protect your trip" with Comprehensive selected
+# 6. Land on /hub/checkout/insurance/[quoteId]
+# 7. Fill the new-card form with 4242424242424242 / 12 / next year / 123 / any name
+# 8. Click "Pay" — expect /hub/checkout/success
+# 9. Sign in as the seed admin (/__test__/sign-in-as-seed-admin)
+# 10. /admin/messages → expect a row with kind INSURANCE_RECEIPT, status DELIVERED
+```
+
+Sign-off rule: both harnesses must run clean once each before Pat ticks the corresponding launch-criteria boxes. The harness output (curl response, browser screenshots) goes into the bug bash log if anything regresses; otherwise a one-line "ran clean on YYYY-MM-DD" against each box is enough.
 
 ## 2. Known issues register
 

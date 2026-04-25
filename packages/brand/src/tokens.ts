@@ -12,8 +12,18 @@ export const colors = {
   navy: '#001F3D',
   /** Secondary surface — muted backgrounds, cards */
   sand: '#F7F3E9',
-  /** Accent — success, highlights, primary CTAs */
+  /** Accent — success badges, highlights, decorative use, large-text and icon contexts */
   green: '#2DC86E',
+  /**
+   * AA-safe variant for green-on-sand and green-on-white text.
+   * The brand green `#2DC86E` only reaches 1.98:1 against `#F7F3E9` and
+   * 2.19:1 against `#FFFFFF`, which fails WCAG 2.1 AA for normal text and
+   * even AA Large (3:1). Sprint 8 audit picked this darker green (4.88:1
+   * on sand, 5.19:1 on white) as the AA-compliant CTA / link variant.
+   * Use `green-cta` anywhere a green pixel is text or a small icon glyph;
+   * keep `green` for fills, badges, and decorative use.
+   */
+  greenCta: '#0B7A3F',
   /** Default surface */
   white: '#FFFFFF',
   /** Primary body text */
@@ -34,6 +44,7 @@ export const colorsHsl = {
   navy: '210 100% 12%',
   sand: '45 45% 94%',
   green: '145 63% 48%',
+  greenCta: '148 83% 26%',
   white: '0 0% 100%',
   charcoal: '0 0% 20%',
   border: '45 30% 85%',

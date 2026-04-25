@@ -13,7 +13,7 @@ export default function HubLayout({
           J
         </div>
       </header>
-      <main className="mx-auto max-w-md">{children}</main>
+      <main id="main-content" tabIndex={-1} className="mx-auto max-w-md outline-none">{children}</main>
       <BottomNav />
     </div>
   );

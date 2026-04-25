@@ -27,7 +27,7 @@ export default async function RegisterPage({ searchParams }: PageProps) {
   const sendError = searchParams.error === 'send_failed';
 
   return (
-    <main className="min-h-screen bg-koncie-sand">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-koncie-sand outline-none">
       <header className="bg-koncie-navy px-5 py-4 text-center">
         <h1 className="font-semibold text-white">Koncie</h1>
       </header>
@@ -92,7 +92,7 @@ export default async function RegisterPage({ searchParams }: PageProps) {
           {linkSent && (
             <Link
               href={`/register?bookingId=${booking.id}`}
-              className="font-semibold text-koncie-green"
+              className="font-semibold text-koncie-green-cta"
             >
               resend the link
             </Link>
@@ -103,7 +103,7 @@ export default async function RegisterPage({ searchParams }: PageProps) {
           Wrong email?{' '}
           <Link
             href={`/welcome?token=`}
-            className="font-semibold text-koncie-green"
+            className="font-semibold text-koncie-green-cta"
           >
             go back
           </Link>

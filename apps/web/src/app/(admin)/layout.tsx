@@ -58,7 +58,7 @@ export default async function AdminLayout({
           </div>
         </aside>
 
-        <main className="flex-1 space-y-6">{children}</main>
+        <main id="main-content" tabIndex={-1} className="flex-1 space-y-6 outline-none">{children}</main>
       </div>
     </div>
   );

@@ -68,7 +68,7 @@ export default async function AdminGuestsPage() {
                   </td>
                   <td className="px-4 py-3">
                     {r.claimed ? (
-                      <span className="rounded-full bg-koncie-green/15 px-2 py-0.5 text-xs font-medium text-koncie-green">
+                      <span className="rounded-full bg-koncie-green/15 px-2 py-0.5 text-xs font-medium text-koncie-green-cta">
                         Claimed
                       </span>
                     ) : (

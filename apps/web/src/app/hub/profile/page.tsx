@@ -32,7 +32,7 @@ export default async function ProfilePage() {
 
       <p className="mt-6 text-xs text-koncie-charcoal/60">
         Need to delete your account? Contact us at{' '}
-        <a className="text-koncie-green" href="mailto:hello@koncie.app">
+        <a className="text-koncie-green-cta" href="mailto:hello@koncie.app">
           hello@koncie.app
         </a>
       </p>

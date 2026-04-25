@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { PricePair } from './price-pair';
 import { convertMinorUnits } from '@/lib/money';
 
@@ -30,10 +31,15 @@ export function ActivityCard({
       href={`/hub/activities/${id}`}
       className="group flex flex-col overflow-hidden rounded-2xl border border-koncie-border bg-white shadow-sm transition-shadow hover:shadow-md"
     >
-      <div
-        className="aspect-[4/3] bg-koncie-sand bg-cover bg-center"
-        style={{ backgroundImage: `url(${imageUrl})` }}
-      />
+      <div className="relative aspect-[4/3] bg-koncie-sand">
+        <Image
+          src={imageUrl}
+          alt=""
+          fill
+          sizes="(min-width: 640px) 50vw, 100vw"
+          className="object-cover"
+        />
+      </div>
       <div className="flex flex-1 flex-col gap-2 p-4">
         <h3 className="text-base font-semibold text-koncie-navy">{name}</h3>
         <p className="line-clamp-2 text-xs text-koncie-charcoal/80">{description}</p>
