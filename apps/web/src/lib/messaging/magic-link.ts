@@ -37,14 +37,27 @@ export async function fireMagicLinkForBooking(
 
   // On preview deployments, NEXT_PUBLIC_SITE_URL points at production —
   // sending the OTP redirect there bounces previews to prod where the
-  // booking row doesn't exist (callback_failed). Use Vercel's per-deploy
-  // VERCEL_URL on non-prod builds so the email lands back on the same
-  // preview build. VERCEL_URL is server-only and auto-injected by Vercel.
-  // Supabase's allowed-redirects list must include the matching wildcard
-  // (e.g. https://*-pat-3409s-projects.vercel.app/auth/callback).
+  // booking row doesn't exist (callback_failed).
+  //
+  // We prefer VERCEL_BRANCH_URL over VERCEL_URL on previews because PKCE
+  // sets a code-verifier cookie scoped to the domain the user submitted
+  // the form on. If the user came in via the branch alias
+  // (koncie-web-git-<branch>-...) and the redirect points at a per-deploy
+  // hash URL (koncie-<hash>-...), the cookie isn't sent on the callback
+  // and exchangeCodeForSession fails with PKCE error → callback_failed.
+  // VERCEL_BRANCH_URL is the stable branch-alias URL and matches the
+  // domain the cookie was set on.
+  //
+  // Fallback chain: branch alias > per-deploy URL > localhost.
+  // Supabase's allowed-redirects list must include both wildcards
+  // (koncie-web-git-*-... and koncie-*-...).
   const siteUrl =
-    process.env.VERCEL_ENV !== 'production' && process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
+    process.env.VERCEL_ENV !== 'production'
+      ? process.env.VERCEL_BRANCH_URL
+        ? `https://${process.env.VERCEL_BRANCH_URL}`
+        : process.env.VERCEL_URL
+          ? `https://${process.env.VERCEL_URL}`
+          : 'http://localhost:3000'
       : process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
   const supabase = createSupabaseServerClient();
   const { error } = await supabase.auth.signInWithOtp({
