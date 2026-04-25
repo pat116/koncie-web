@@ -63,7 +63,7 @@ Mock-route harness ready (see §1a below); Pat to run pre-launch and tick the bo
 
 - [ ] Offer card renders on `/insurance` for a seed booking with realistic premium
 - [ ] Quote round-trip through the CoverMore sandbox returns
-- [ ] FatZebra sandbox card form completes payment
+- [ ] Kovena MoR sandbox card form completes payment
 - [ ] Policy bind succeeds; policy number persisted
 - [ ] `INSURANCE_RECEIPT` email dispatched, visible in `/admin/messages` as DELIVERED
 

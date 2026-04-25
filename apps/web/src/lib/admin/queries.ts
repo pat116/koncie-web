@@ -287,9 +287,11 @@ export async function listPriorityAlerts(
  * board-deck attach-rate definition (>5% insurance, >3% flights per
  * confirmed booking).
  *
- * Flight revenue is always 0 at the Koncie level in the MVP: Jet Seeker
- * processes flight payments through FatZebra, not through Koncie MoR
- * (addendum §6.2). The tile exists so the dashboard shape is final.
+ * Per Sprint-8 gating decision Q1 (locked 2026-04-25), flight purchase is
+ * fully embedded in Koncie: flights JOIN the Koncie cart and settle through
+ * Kovena's AUD merchant facility alongside tours/transfers/dining/insurance.
+ * Flight revenue is therefore counted at the Koncie level — same revenue
+ * surface as other ancillaries.
  */
 export async function computeRevenueKpis(
   propertyId: string,

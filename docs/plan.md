@@ -1,6 +1,6 @@
 # Koncie Prototype — Rebuild Plan
 
-**Author:** Pat Sheridan (with Claude)
+**Author:** Pat Shiels (with Claude)
 **Date:** 2026-04-23
 **Status:** Draft v1 — plan only, no code written
 **Inputs reviewed:**

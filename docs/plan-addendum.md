@@ -128,7 +128,7 @@ From Pat's uploaded "Jetseeker Technical Overview":
 - **Infrastructure**: Docker + Nginx + Supervisor
 - **CI/CD**: GitLab
 - **Flight inventory**: Amadeus (SOAP/WSDL)
-- **Payment processing**: FatZebra (**not** Kovena — confirms Jet Seeker's own flight transactions stay in Jet Seeker; Koncie only touches ancillaries)
+- **Payment processing**: Kovena MoR (unified across JetSeeker flight transactions and Koncie ancillaries, per Sprint-8 gating decision Q1 locked 2026-04-25 — flight purchase is fully embedded in Koncie)
 - **CRM**: HubSpot
 - **Key data**: `Order` table keyed on `email` with a JSONB `object` blob carrying the full itinerary
 
