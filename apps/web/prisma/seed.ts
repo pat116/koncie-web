@@ -18,15 +18,39 @@ async function main() {
     );
   }
 
-  // Hard reset for idempotent dev seeding. Delete in FK-safe order.
+  // Hard reset for idempotent dev seeding.
   // Safe because this is a dev/preview-only script — Production is guarded
   // by the VERCEL_ENV check above.
-  await prisma.messageLog.deleteMany({});
-  await prisma.adminUser.deleteMany({});
-  await prisma.booking.deleteMany({});
-  await prisma.guest.deleteMany({});
-  await prisma.property.deleteMany({});
-  await prisma.partnerIntegration.deleteMany({});
+  //
+  // TRUNCATE CASCADE is used instead of per-table deleteMany() because
+  // Sprint 2 introduced a CHECK constraint on transactions
+  // (transactions_capture_has_ledger_check — captured transactions must
+  // have a non-null trust_ledger_id). The matching FK (trust_ledger_entries
+  // -> transactions.trust_ledger_id) is ON DELETE SET NULL, which means
+  // deleting a ledger entry nulls the transaction's ref and immediately
+  // violates the CHECK. There is no row-level delete order that satisfies
+  // both. TRUNCATE CASCADE bypasses both FK triggers and CHECK constraints
+  // in one statement and restarts identity sequences.
+  //
+  // When adding a new Prisma model whose data should be wiped on seed,
+  // append its @@map'd table name to the list below.
+  await prisma.$executeRawUnsafe(`
+    TRUNCATE TABLE
+      "message_logs",
+      "trust_ledger_entries",
+      "transactions",
+      "insurance_policies",
+      "insurance_quotes",
+      "saved_cards",
+      "flight_bookings",
+      "upsells",
+      "admin_users",
+      "bookings",
+      "guests",
+      "properties",
+      "partner_integrations"
+    RESTART IDENTITY CASCADE;
+  `);
 
   const partner = await prisma.partnerIntegration.create({
     data: {
