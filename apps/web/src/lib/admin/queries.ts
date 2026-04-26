@@ -347,11 +347,13 @@ export async function computeRevenueKpis(
   };
 }
 
-/** A row in the admin messages list. Sprint 6 — Resend-sent transactional audit. */
+/** A row in the admin messages list. Sprint 6 — transactional audit (email + SMS). */
 export type AdminMessageRow = {
   id: string;
   createdAt: Date;
   guestEmail: string | null;
+  /// Populated for SMS rows (PRE_ARRIVAL_SMS) — the E.164 destination.
+  recipientPhone: string | null;
   guestName: string | null;
   kind: MessageKind;
   subject: string;
@@ -389,6 +391,7 @@ export async function listMessagesForProperty(
     id: r.id,
     createdAt: r.createdAt,
     guestEmail: r.guest?.email ?? r.recipientEmail,
+    recipientPhone: r.recipientPhone,
     guestName: r.guest
       ? `${r.guest.firstName} ${r.guest.lastName}`
       : null,

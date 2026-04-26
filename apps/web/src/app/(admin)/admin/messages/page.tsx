@@ -10,6 +10,7 @@ const KIND_LABEL: Record<MessageKind, string> = {
   INSURANCE_REMINDER_T3: 'Insurance T-3',
   INSURANCE_RECEIPT: 'Insurance Receipt',
   HOTEL_BOOKING_CONFIRMED: 'Hotel Confirmed',
+  PRE_ARRIVAL_SMS: 'Pre-Arrival SMS',
   OTHER: 'Other',
 };
 
@@ -90,11 +91,11 @@ export default async function AdminMessagesPage() {
                           {r.guestName}
                         </span>{' '}
                         <span className="text-koncie-charcoal/60">
-                          {r.guestEmail}
+                          {r.recipientPhone ?? r.guestEmail}
                         </span>
                       </>
                     ) : (
-                      r.guestEmail
+                      (r.recipientPhone ?? r.guestEmail)
                     )}
                   </td>
                   <td className="px-4 py-3">
