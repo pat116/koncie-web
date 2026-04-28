@@ -37,7 +37,7 @@ Sprint 3 adds Koncie's first read-only integration: flight itinerary data from J
 **Ingestion-then-cache data flow.** The mock adapter returns in-memory `FlightBookingRead[]` objects. An ingestion service (`syncFlightsForGuest`) persists them to `FlightBooking` keyed on `(guestId, externalRef)`. Hub reads from `FlightBooking` directly — no outbound adapter call on the render hot-path once sync has run.
 
 **Two triggers for `syncFlightsForGuest`:**
-1. **Dev-helper route** `/__test__/ingest-jetseeker-for-seed-guest` — GET handler, guarded by `NODE_ENV !== 'production' || KONCIE_ENABLE_TEST_ROUTES === '1'`. Playwright + manual demos use this. Same guard pattern as Sprint 2-polish's `/__test__/sign-in-as-seed-guest` route.
+1. **Dev-helper route** `/dev-test/ingest-jetseeker-for-seed-guest` — GET handler, guarded by `NODE_ENV !== 'production' || KONCIE_ENABLE_TEST_ROUTES === '1'`. Playwright + manual demos use this. Same guard pattern as Sprint 2-polish's `/dev-test/sign-in-as-seed-guest` route.
 2. **Lazy-sync on hub render** — when the current guest's `flightsLastSyncedAt` is null OR older than 60 seconds AND their `FlightBooking` rows are empty, the `/hub` server component calls sync before rendering. Debounce prevents repeated syncs for a visitor clicking around the hub.
 
 **Stack additions** (on top of Sprint 2): no new deps. Sprint 3 reuses `@prisma/client`, Sentry, existing Vitest + Playwright.
@@ -160,9 +160,9 @@ Sprint-N swaps the import for a real Kovena/Jet Seeker wrapper — one-line chan
 
 On adapter throw: catch, capture to Sentry with `guestId` context, leave `flightsLastSyncedAt` unchanged (so the next call retries), re-throw as `JetSeekerUnavailableError` for the caller's soft-fail handling.
 
-### Dev-helper route (`apps/web/src/app/__test__/ingest-jetseeker-for-seed-guest/route.ts`)
+### Dev-helper route (`apps/web/src/app/dev-test/ingest-jetseeker-for-seed-guest/route.ts`)
 
-GET handler guarded by `NODE_ENV !== 'production' || KONCIE_ENABLE_TEST_ROUTES === '1'` (same guard as Sprint 2-polish's `/__test__/sign-in-as-seed-guest`). Resolves the seeded guest by `KONCIE_SEED_EMAIL`, calls `syncFlightsForGuest(guest.id)`, returns 303 redirect to `/hub`. Playwright and manual demos use this to bypass lazy-sync timing.
+GET handler guarded by `NODE_ENV !== 'production' || KONCIE_ENABLE_TEST_ROUTES === '1'` (same guard as Sprint 2-polish's `/dev-test/sign-in-as-seed-guest`). Resolves the seeded guest by `KONCIE_SEED_EMAIL`, calls `syncFlightsForGuest(guest.id)`, returns 303 redirect to `/hub`. Playwright and manual demos use this to bypass lazy-sync timing.
 
 ### Hub lazy-sync
 
@@ -197,7 +197,7 @@ No guest-facing error states beyond the single soft-fail banner. All other excep
 
 **E2E (1 spec):**
 
-5. `apps/web/tests/e2e/flights.spec.ts` — `beforeEach` hits `/__test__/ingest-jetseeker-for-seed-guest` then `/__test__/sign-in-as-seed-guest`, asserts the hub shows (a) the flight card with both routing rows and dates, (b) the "Your Namotu activities await" deep-link card, (c) the "Travel protection · covers your 14 Jul flight to Nadi" contextual stub. Clicks the deep-link and asserts landing on `/hub/activities`.
+5. `apps/web/tests/e2e/flights.spec.ts` — `beforeEach` hits `/dev-test/ingest-jetseeker-for-seed-guest` then `/dev-test/sign-in-as-seed-guest`, asserts the hub shows (a) the flight card with both routing rows and dates, (b) the "Your Namotu activities await" deep-link card, (c) the "Travel protection · covers your 14 Jul flight to Nadi" contextual stub. Clicks the deep-link and asserts landing on `/hub/activities`.
 
 ## Docs
 
@@ -213,7 +213,7 @@ No guest-facing error states beyond the single soft-fail banner. All other excep
 3. "Travel protection · covers your 14 Jul flight to Nadi" stub visible with destination-contextual copy
 4. `pnpm db:seed` creates exactly one `FlightBooking` row for the seeded guest; `Guest.flightsLastSyncedAt` is null at first render
 5. First hub render for the seed guest lazy-triggers sync; subsequent renders within 60s don't re-sync (observe via Prisma query log)
-6. Dev-helper route `/__test__/ingest-jetseeker-for-seed-guest` returns 303 redirect to `/hub`; hitting it refreshes `flightsLastSyncedAt`
+6. Dev-helper route `/dev-test/ingest-jetseeker-for-seed-guest` returns 303 redirect to `/hub`; hitting it refreshes `flightsLastSyncedAt`
 7. All CI checks green (typecheck, lint, build, test); Playwright E2E flights.spec runs against the dev-helper route (remains `continue-on-error` in CI per Sprint 2-polish posture)
 
 ## Risks

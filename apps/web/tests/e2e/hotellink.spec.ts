@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Sprint 7 HotelLink ingest end-to-end', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/__test__/sign-in-as-seed-admin');
+    await page.goto('/dev-test/sign-in-as-seed-admin');
     await expect(page).toHaveURL(/\/admin$/);
   });
 
@@ -11,7 +11,7 @@ test.describe('Sprint 7 HotelLink ingest end-to-end', () => {
   }) => {
     // Trigger the ingest directly — the test route bypasses HMAC so local
     // runs don't need the HOTELLINK_WEBHOOK_SECRET set.
-    await page.goto('/__test__/ingest-hotellink-for-seed-guest');
+    await page.goto('/dev-test/ingest-hotellink-for-seed-guest');
     await expect(page).toHaveURL(/\/hub$/);
 
     await page.goto('/admin/messages');

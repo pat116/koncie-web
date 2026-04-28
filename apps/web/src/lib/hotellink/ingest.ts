@@ -2,7 +2,7 @@
  * HotelLink booking ingest.
  *
  * Called by the webhook route after HMAC verification, and by the dev
- * `/__test__/ingest-hotellink-for-seed-guest` helper for local demos.
+ * `/dev-test/ingest-hotellink-for-seed-guest` helper for local demos.
  *
  * Contract:
  *  1. Zod-validate the payload (ZodError surfaces to the caller so the

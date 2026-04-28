@@ -4,9 +4,9 @@ test.describe('Sprint 3 flight itinerary on hub', () => {
   test.beforeEach(async ({ page }) => {
     // Sprint 3 dev helper: force flight ingestion for the seeded guest so the
     // hub has cached flights to render regardless of adapter latency.
-    await page.goto('/__test__/ingest-jetseeker-for-seed-guest');
+    await page.goto('/dev-test/ingest-jetseeker-for-seed-guest');
     // Sprint 2-polish dev helper: sign in as the seeded guest and land on /hub.
-    await page.goto('/__test__/sign-in-as-seed-guest');
+    await page.goto('/dev-test/sign-in-as-seed-guest');
     await expect(page).toHaveURL(/\/hub$/);
   });
 

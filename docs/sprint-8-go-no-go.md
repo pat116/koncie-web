@@ -95,21 +95,21 @@ The Sprint 8 brief asks for "passing run" evidence on two end-to-end flows. Neit
 
 ### HotelLink ingest harness (mock test route)
 
-The Sprint 7 dev-only test route at `apps/web/src/app/__test__/ingest-hotellink-for-seed-guest/route.ts` runs the production ingest pipeline (`ingestHotelLinkBooking` → upsert Booking + Guest → MessageLog `MAGIC_LINK` row) without the HMAC dance. Use it to validate the end-to-end before the Kovena ops sandbox emitter is wired.
+The Sprint 7 dev-only test route at `apps/web/src/app/dev-test/ingest-hotellink-for-seed-guest/route.ts` runs the production ingest pipeline (`ingestHotelLinkBooking` → upsert Booking + Guest → MessageLog `MAGIC_LINK` row) without the HMAC dance. Use it to validate the end-to-end before the Kovena ops sandbox emitter is wired.
 
 ```bash
 # Terminal 1 — boot the app
 cd apps/web && pnpm dev
 
 # Terminal 2 — trigger the ingest
-curl -i http://localhost:3000/__test__/ingest-hotellink-for-seed-guest
+curl -i http://localhost:3000/dev-test/ingest-hotellink-for-seed-guest
 # Expect: 303 redirect to /hub with Set-Cookie session
 
 # In a browser:
-# 1. Sign in as the seed admin: /__test__/sign-in-as-seed-admin → lands on /admin
+# 1. Sign in as the seed admin: /dev-test/sign-in-as-seed-admin → lands on /admin
 # 2. Open /admin/messages → expect a MAGIC_LINK row for jane.demo@... (or your KONCIE_SEED_EMAIL)
 # 3. Open /admin/bookings → expect the synthetic Namotu booking row
-# 4. Sign in as the seed guest: /__test__/sign-in-as-seed-guest → lands on /hub
+# 4. Sign in as the seed guest: /dev-test/sign-in-as-seed-guest → lands on /hub
 # 5. Confirm the booking-hero shows Namotu Island Fiji + the seeded check-in dates
 ```
 
@@ -124,15 +124,15 @@ If the Kovena ops HotelLink sandbox stands up before launch, replace step 2 with
 cd apps/web && pnpm dev
 
 # In a browser:
-# 1. Hit /__test__/ingest-jetseeker-for-seed-guest        (gives the seed guest a flight)
-# 2. Hit /__test__/seed-insurance-quote-for-seed-guest    (forces the three CoverMore quotes)
-# 3. Hit /__test__/sign-in-as-seed-guest                  (lands on /hub)
+# 1. Hit /dev-test/ingest-jetseeker-for-seed-guest        (gives the seed guest a flight)
+# 2. Hit /dev-test/seed-insurance-quote-for-seed-guest    (forces the three CoverMore quotes)
+# 3. Hit /dev-test/sign-in-as-seed-guest                  (lands on /hub)
 # 4. On /hub, scroll to the "Travel protection · via CoverMore" card
 # 5. Click "Protect your trip" with Comprehensive selected
 # 6. Land on /hub/checkout/insurance/[quoteId]
 # 7. Fill the new-card form with 4242424242424242 / 12 / next year / 123 / any name
 # 8. Click "Pay" — expect /hub/checkout/success
-# 9. Sign in as the seed admin (/__test__/sign-in-as-seed-admin)
+# 9. Sign in as the seed admin (/dev-test/sign-in-as-seed-admin)
 # 10. /admin/messages → expect a row with kind INSURANCE_RECEIPT, status DELIVERED
 ```
 
