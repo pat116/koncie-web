@@ -120,9 +120,9 @@ React Email template matching the Sprint 6 pattern. Content:
 - Use the Koncie brand token inline styles (navy header, sand background, green CTA) matching the other templates
 - Register in `apps/web/src/lib/messaging/templates/index.ts`
 
-### 7. Dev-only test route — `apps/web/src/app/__test__/ingest-hotellink-for-seed-guest/route.ts`
+### 7. Dev-only test route — `apps/web/src/app/dev-test/ingest-hotellink-for-seed-guest/route.ts`
 
-- Mirrors `apps/web/src/app/__test__/ingest-jetseeker-for-seed-guest/route.ts` from Sprint 3
+- Mirrors `apps/web/src/app/dev-test/ingest-jetseeker-for-seed-guest/route.ts` from Sprint 3
 - NODE_ENV !== 'production' OR `KONCIE_ENABLE_TEST_ROUTES === '1'` guard
 - GET handler calls `ingestHotelLinkBooking` directly (skips signature verification for local testing) with a synthesized payload:
   ```ts
@@ -154,7 +154,7 @@ Follow the Sprint 5/6 `any`-typed Prisma mock + `vi.hoisted()` patterns.
 ### 10. Playwright E2E — `apps/web/tests/e2e/hotellink.spec.ts`
 
 - Sign in as seed admin
-- Call `/__test__/ingest-hotellink-for-seed-guest` to trigger a synthetic ingest
+- Call `/dev-test/ingest-hotellink-for-seed-guest` to trigger a synthetic ingest
 - Navigate to `/admin/messages` and assert at least one `HOTEL_BOOKING_CONFIRMED` row exists with kind label "Hotel Confirmed"
 - `continue-on-error` per the Sprint 2-polish CI posture
 

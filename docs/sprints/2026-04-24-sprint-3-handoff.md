@@ -28,12 +28,12 @@ All Sprint 3 source code has been authored into this repo (OneDrive-synced from 
 - `apps/web/src/adapters/jetseeker-mock.test.ts` — 5 tests
 
 **UI + route:**
-- `apps/web/src/app/__test__/ingest-jetseeker-for-seed-guest/route.ts` — dev-helper route (guarded, 303 → `/hub`)
+- `apps/web/src/app/dev-test/ingest-jetseeker-for-seed-guest/route.ts` — dev-helper route (guarded, 303 → `/hub`)
 - `apps/web/src/components/hub/flight-itinerary-card.tsx` — navy card, "YOUR FLIGHT · Fiji Airways FJ"
 - `apps/web/src/components/hub/contextual-offers-section.tsx` — renders activities deep-link + insurance stub
 
 **Tests + migration:**
-- `apps/web/tests/e2e/flights.spec.ts` — Playwright E2E (uses `/__test__/ingest-jetseeker-for-seed-guest` then `/__test__/sign-in-as-seed-guest`)
+- `apps/web/tests/e2e/flights.spec.ts` — Playwright E2E (uses `/dev-test/ingest-jetseeker-for-seed-guest` then `/dev-test/sign-in-as-seed-guest`)
 - `apps/web/prisma/migrations/20260424120000_sprint_3_flight_booking/migration.sql`
 
 **Docs:**

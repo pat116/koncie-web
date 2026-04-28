@@ -184,7 +184,7 @@ pnpm --filter @koncie/web test:e2e
 
 Expected: 2 passed (happy path + fail-trigger-then-retry).
 
-If the E2E spec references `/__test__/sign-in-as-seed-guest` and that route doesn't exist yet — that was a Sprint 1 dev helper assumption. The spec may need to sign in via the real homepage "Start demo" button. Adjust the `beforeEach` if needed; the test assertions themselves are correct.
+If the E2E spec references `/dev-test/sign-in-as-seed-guest` and that route doesn't exist yet — that was a Sprint 1 dev helper assumption. The spec may need to sign in via the real homepage "Start demo" button. Adjust the `beforeEach` if needed; the test assertions themselves are correct.
 
 ### 9. Commit + push + PR
 

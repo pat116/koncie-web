@@ -2,8 +2,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Sprint 5 hotel admin portal', () => {
   test.beforeEach(async ({ page }) => {
-    // Sign in as seeded hotel_admin; /__test__/sign-in-as-seed-admin lands on /admin.
-    await page.goto('/__test__/sign-in-as-seed-admin');
+    // Sign in as seeded hotel_admin; /dev-test/sign-in-as-seed-admin lands on /admin.
+    await page.goto('/dev-test/sign-in-as-seed-admin');
     await expect(page).toHaveURL(/\/admin$/);
   });
 

@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Sprint 6 admin messages timeline', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/__test__/sign-in-as-seed-admin');
+    await page.goto('/dev-test/sign-in-as-seed-admin');
     await expect(page).toHaveURL(/\/admin$/);
   });
 

@@ -38,7 +38,7 @@
 - `apps/web/src/lib/flights/contextual-offers.test.ts`
 
 **Pages:**
-- `apps/web/src/app/__test__/ingest-jetseeker-for-seed-guest/route.ts`
+- `apps/web/src/app/dev-test/ingest-jetseeker-for-seed-guest/route.ts`
 
 **Components:**
 - `apps/web/src/components/hub/flight-itinerary-card.tsx`
@@ -1010,14 +1010,14 @@ git commit -m "feat(flights): resolveContextualOffers with hardcoded rules"
 
 ---
 
-## Task 13: Dev-helper route `/__test__/ingest-jetseeker-for-seed-guest`
+## Task 13: Dev-helper route `/dev-test/ingest-jetseeker-for-seed-guest`
 
 **Files:**
-- Create: `apps/web/src/app/__test__/ingest-jetseeker-for-seed-guest/route.ts`
+- Create: `apps/web/src/app/dev-test/ingest-jetseeker-for-seed-guest/route.ts`
 
 - [ ] **Step 1: Write the route**
 
-Create `apps/web/src/app/__test__/ingest-jetseeker-for-seed-guest/route.ts`:
+Create `apps/web/src/app/dev-test/ingest-jetseeker-for-seed-guest/route.ts`:
 
 ```ts
 /**
@@ -1068,7 +1068,7 @@ export async function GET(request: NextRequest) {
 - [ ] **Step 2: Commit**
 
 ```powershell
-git add apps/web/src/app/__test__/ingest-jetseeker-for-seed-guest/route.ts
+git add apps/web/src/app/dev-test/ingest-jetseeker-for-seed-guest/route.ts
 git commit -m "feat(test-helpers): ingest-jetseeker-for-seed-guest dev route"
 ```
 
@@ -1429,10 +1429,10 @@ import { test, expect } from '@playwright/test';
 test.describe('Sprint 3 flight itinerary on hub', () => {
   test.beforeEach(async ({ page }) => {
     // Sprint 2-polish dev helper: sign in as seeded guest
-    await page.goto('/__test__/sign-in-as-seed-guest');
+    await page.goto('/dev-test/sign-in-as-seed-guest');
     await expect(page).toHaveURL(/\/hub$/);
     // Sprint 3 dev helper: force flight ingestion
-    await page.goto('/__test__/ingest-jetseeker-for-seed-guest');
+    await page.goto('/dev-test/ingest-jetseeker-for-seed-guest');
     await expect(page).toHaveURL(/\/hub$/);
   });
 
@@ -1665,7 +1665,7 @@ Create `docs/sprints/sprint-3-changelog.md`:
 - **Prisma schema v3** — adds `FlightBooking` model, `Guest.flightsLastSyncedAt` column. No CHECKs (not MoR-load-bearing); `UNIQUE (guest_id, external_ref)` for idempotent upsert.
 - **Ingestion service** (`lib/flights/sync.ts`) — upsert + stale-row cleanup + `flightsLastSyncedAt` bump, wrapped in `$transaction`. Adapter throw leaves timestamp unchanged.
 - **Contextual offer resolver** (`lib/flights/contextual-offers.ts`) — pure function, two hardcoded rules: activities-deep-link when Fiji destination + ACTIVE upsell; insurance-stub always when a flight exists. No rules engine.
-- **Dev-helper route** `/__test__/ingest-jetseeker-for-seed-guest` — bypasses 60s lazy-sync for Playwright + demos.
+- **Dev-helper route** `/dev-test/ingest-jetseeker-for-seed-guest` — bypasses 60s lazy-sync for Playwright + demos.
 - **Hub integration** — `FlightItineraryCard` between booking hero and add-ons; `ContextualOffersSection` after activities preview. Old "Flight add-ons · Coming soon" stub removed.
 - **Playwright E2E** — flights.spec.ts asserts the full demo flow.
 - **Docs** — new `flights.md`, appended `architecture.md`, appended `data-model.md`.
@@ -1761,7 +1761,7 @@ Expected: `* [new branch] sprint-3 -> sprint-3`; GitHub prints the "Create a pul
 
 - [ ] **Step 2: Wait for CI + Vercel**
 
-Navigate to `https://github.com/pat116/koncie-web/pull/new/sprint-3`. Wait ~1–2 min for CI typecheck/lint/build/test to turn green. Playwright E2E job should now run (not skipped) against `/__test__/ingest-jetseeker-for-seed-guest` + `/__test__/sign-in-as-seed-guest`; it remains `continue-on-error: true` per Sprint 2-polish posture.
+Navigate to `https://github.com/pat116/koncie-web/pull/new/sprint-3`. Wait ~1–2 min for CI typecheck/lint/build/test to turn green. Playwright E2E job should now run (not skipped) against `/dev-test/ingest-jetseeker-for-seed-guest` + `/dev-test/sign-in-as-seed-guest`; it remains `continue-on-error: true` per Sprint 2-polish posture.
 
 - [ ] **Step 3: Open the PR**
 

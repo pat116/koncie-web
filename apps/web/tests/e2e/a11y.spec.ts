@@ -12,8 +12,8 @@ import AxeBuilder from '@axe-core/playwright';
  * shadcn primitives) are acceptable for the pilot and would otherwise
  * generate noise without changing the user experience.
  *
- * The signed-in routes use the existing `/__test__/sign-in-as-seed-guest`
- * and `/__test__/sign-in-as-seed-admin` helpers, mirroring `admin.spec.ts`,
+ * The signed-in routes use the existing `/dev-test/sign-in-as-seed-guest`
+ * and `/dev-test/sign-in-as-seed-admin` helpers, mirroring `admin.spec.ts`,
  * `checkout.spec.ts`, and `messages.spec.ts`. Same seed dependency: `pnpm
  * db:seed` must have run first.
  *
@@ -42,23 +42,23 @@ const ROUTES: RouteCase[] = [
     path: '/hub',
     auth: 'guest',
     prereq: [
-      '/__test__/ingest-jetseeker-for-seed-guest',
-      '/__test__/seed-insurance-quote-for-seed-guest',
+      '/dev-test/ingest-jetseeker-for-seed-guest',
+      '/dev-test/seed-insurance-quote-for-seed-guest',
     ],
   },
   {
     name: 'flights / trip detail',
     path: '/hub/trip',
     auth: 'guest',
-    prereq: ['/__test__/ingest-jetseeker-for-seed-guest'],
+    prereq: ['/dev-test/ingest-jetseeker-for-seed-guest'],
   },
   {
     name: 'insurance offer (rendered on hub)',
     path: '/hub',
     auth: 'guest',
     prereq: [
-      '/__test__/ingest-jetseeker-for-seed-guest',
-      '/__test__/seed-insurance-quote-for-seed-guest',
+      '/dev-test/ingest-jetseeker-for-seed-guest',
+      '/dev-test/seed-insurance-quote-for-seed-guest',
     ],
   },
   { name: 'admin overview', path: '/admin', auth: 'admin' },
@@ -74,9 +74,9 @@ for (const route of ROUTES) {
       for (const url of route.prereq ?? []) {
         await page.goto(url);
       }
-      await page.goto('/__test__/sign-in-as-seed-guest');
+      await page.goto('/dev-test/sign-in-as-seed-guest');
     } else if (route.auth === 'admin') {
-      await page.goto('/__test__/sign-in-as-seed-admin');
+      await page.goto('/dev-test/sign-in-as-seed-admin');
     }
 
     await page.goto(route.path);
@@ -107,7 +107,7 @@ for (const route of ROUTES) {
 test('a11y: payment / checkout entry has no serious/critical axe violations', async ({
   page,
 }) => {
-  await page.goto('/__test__/sign-in-as-seed-guest');
+  await page.goto('/dev-test/sign-in-as-seed-guest');
   await page.goto('/payment');
 
   const results = await new AxeBuilder({ page })

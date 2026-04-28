@@ -23,7 +23,7 @@ Sprint 7 plugs Koncie's first real **inbound booking source** end-to-end. Ingest
 - `apps/web/src/lib/hotellink/` — `ingestHotelLinkBooking` (upsert Guest + Booking in a `$transaction`, 14-day MessageLog idempotency, 7-day signed magic-link) and `verifyHotelLinkSignature` (HMAC-SHA256 with 5-minute replay window).
 - `/api/webhooks/hotellink` POST handler (200/400/404/500 response matrix tuned for HotelLink's retry semantics).
 - React Email template `hotel-booking-confirmed-v1` registered in the Sprint 6 template registry.
-- Dev test route `/__test__/ingest-hotellink-for-seed-guest` mirrors the Sprint 3 Jet Seeker test-route pattern.
+- Dev test route `/dev-test/ingest-hotellink-for-seed-guest` mirrors the Sprint 3 Jet Seeker test-route pattern.
 
 ## Out of scope (deferred)
 
@@ -99,7 +99,7 @@ Does **not** block the build — the endpoint returns 500 with a Sentry capture 
 
 - [ ] Apply the migration block above in Supabase SQL Editor and confirm 8 rows in `_prisma_migrations`.
 - [ ] Add `HOTELLINK_WEBHOOK_SECRET` to Vercel env (Production + Preview).
-- [ ] Visit `/__test__/ingest-hotellink-for-seed-guest` on the preview URL while signed in as the seed guest — should redirect to `/hub`.
+- [ ] Visit `/dev-test/ingest-hotellink-for-seed-guest` on the preview URL while signed in as the seed guest — should redirect to `/hub`.
 - [ ] Sign in as seed admin, visit `/admin/messages`, confirm a "Hotel Confirmed" row appears for the Namotu booking.
 - [ ] Optional: hit `/api/webhooks/hotellink` with a curl-signed payload to exercise the real webhook path.
 

@@ -11,7 +11,7 @@
 - **Prisma schema v3** — adds `FlightBooking` model, `Guest.flightsLastSyncedAt` column. No CHECKs (not MoR-load-bearing); `UNIQUE (guest_id, external_ref)` for idempotent upsert.
 - **Ingestion service** (`lib/flights/sync.ts`) — upsert + stale-row cleanup + `flightsLastSyncedAt` bump, wrapped in `$transaction`. Adapter throw leaves timestamp unchanged.
 - **Contextual offer resolver** (`lib/flights/contextual-offers.ts`) — pure function, two hardcoded rules: activities-deep-link when Fiji destination + ACTIVE upsell; insurance-stub always when a flight exists. No rules engine.
-- **Dev-helper route** `/__test__/ingest-jetseeker-for-seed-guest` — bypasses 60s lazy-sync for Playwright + demos.
+- **Dev-helper route** `/dev-test/ingest-jetseeker-for-seed-guest` — bypasses 60s lazy-sync for Playwright + demos.
 - **Hub integration** — `FlightItineraryCard` between booking hero and add-ons; `ContextualOffersSection` after activities preview. Old "Flight add-ons · Coming soon" stub removed.
 - **Playwright E2E** — flights.spec.ts asserts the full demo flow.
 - **Docs** — new `flights.md`, appended `architecture.md`, appended `data-model.md`.
