@@ -3,11 +3,11 @@ import { test, expect } from '@playwright/test';
 test.describe('Sprint 4 CoverMore insurance offer on hub', () => {
   test.beforeEach(async ({ page }) => {
     // Ensure the seeded guest has a flight booking (insurance quoting needs it).
-    await page.goto('/__test__/ingest-jetseeker-for-seed-guest');
+    await page.goto('/dev-test/ingest-jetseeker-for-seed-guest');
     // Then force insurance quotes.
-    await page.goto('/__test__/seed-insurance-quote-for-seed-guest');
+    await page.goto('/dev-test/seed-insurance-quote-for-seed-guest');
     // Sign in and land on /hub.
-    await page.goto('/__test__/sign-in-as-seed-guest');
+    await page.goto('/dev-test/sign-in-as-seed-guest');
     await expect(page).toHaveURL(/\/hub$/);
   });
 

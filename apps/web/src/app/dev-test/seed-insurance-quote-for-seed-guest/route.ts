@@ -5,7 +5,7 @@
  * ingest helper.
  *
  * Note: insurance quoting requires a FlightBooking to exist for the guest.
- * Call /api/__test__/ingest-jetseeker-for-seed-guest first if the seed guest
+ * Call /api/dev-test/ingest-jetseeker-for-seed-guest first if the seed guest
  * has no flights cached.
  */
 import { NextResponse, type NextRequest } from 'next/server';

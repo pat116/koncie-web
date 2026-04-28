@@ -2859,8 +2859,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Sprint 2 checkout', () => {
   test.beforeEach(async ({ page }) => {
-    // Assumes the dev helper `/__test__/sign-in-as-seed-guest` exists from Sprint 1.
-    await page.goto('/__test__/sign-in-as-seed-guest');
+    // Assumes the dev helper `/dev-test/sign-in-as-seed-guest` exists from Sprint 1.
+    await page.goto('/dev-test/sign-in-as-seed-guest');
     await expect(page).toHaveURL(/\/hub$/);
   });
 
@@ -2917,7 +2917,7 @@ Append to `apps/web/tests/e2e/checkout.spec.ts`:
 ```ts
 test.describe('Sprint 2 checkout — fail trigger', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/__test__/sign-in-as-seed-guest');
+    await page.goto('/dev-test/sign-in-as-seed-guest');
   });
 
   test('4000000000000002 declines and retry succeeds', async ({ page }) => {

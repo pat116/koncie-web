@@ -7,7 +7,7 @@ test.describe('Sprint 6 completion — /c/[token] chat surface', () => {
   }) => {
     // 1. Mint via the dev test route. Returns { token, url }.
     const mintRes = await request.get(
-      '/__test__/mint-chat-token-for-seed-booking',
+      '/dev-test/mint-chat-token-for-seed-booking',
     );
     expect(mintRes.ok()).toBeTruthy();
     const { token } = (await mintRes.json()) as { token: string };

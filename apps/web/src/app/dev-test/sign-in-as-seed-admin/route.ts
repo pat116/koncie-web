@@ -1,7 +1,7 @@
 /**
  * Sprint 5 dev + CI-only helper that signs a Playwright test session in as
  * the seeded hotel_admin without the magic-link round-trip. Parallel to
- * `/__test__/sign-in-as-seed-guest`, pointed at the admin seed email.
+ * `/dev-test/sign-in-as-seed-guest`, pointed at the admin seed email.
  *
  * Guarded so it CANNOT run in a Vercel production build unless
  * `KONCIE_ENABLE_TEST_ROUTES=1` is explicitly set.
