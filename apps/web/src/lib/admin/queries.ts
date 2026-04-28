@@ -287,9 +287,11 @@ export async function listPriorityAlerts(
  * board-deck attach-rate definition (>5% insurance, >3% flights per
  * confirmed booking).
  *
- * Flight revenue is always 0 at the Koncie level in the MVP: Jet Seeker
- * processes flight payments through FatZebra, not through Koncie MoR
- * (addendum §6.2). The tile exists so the dashboard shape is final.
+ * Per Sprint-8 gating decision Q1 (locked 2026-04-25), flight purchase is
+ * fully embedded in Koncie: flights JOIN the Koncie cart and settle through
+ * Kovena's AUD merchant facility alongside tours/transfers/dining/insurance.
+ * Flight revenue is therefore counted at the Koncie level — same revenue
+ * surface as other ancillaries.
  */
 export async function computeRevenueKpis(
   propertyId: string,
@@ -345,11 +347,13 @@ export async function computeRevenueKpis(
   };
 }
 
-/** A row in the admin messages list. Sprint 6 — Resend-sent transactional audit. */
+/** A row in the admin messages list. Sprint 6 — transactional audit (email + SMS). */
 export type AdminMessageRow = {
   id: string;
   createdAt: Date;
   guestEmail: string | null;
+  /// Populated for SMS rows (PRE_ARRIVAL_SMS) — the E.164 destination.
+  recipientPhone: string | null;
   guestName: string | null;
   kind: MessageKind;
   subject: string;
@@ -387,6 +391,7 @@ export async function listMessagesForProperty(
     id: r.id,
     createdAt: r.createdAt,
     guestEmail: r.guest?.email ?? r.recipientEmail,
+    recipientPhone: r.recipientPhone,
     guestName: r.guest
       ? `${r.guest.firstName} ${r.guest.lastName}`
       : null,

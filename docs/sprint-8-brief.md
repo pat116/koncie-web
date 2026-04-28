@@ -27,7 +27,7 @@ Get Koncie into a state where Pat is comfortable inviting the first real Namotu 
 
 ### 1. WCAG AA accessibility audit
 
-Run a full WCAG 2.1 AA pass across the four surfaces that a real guest or staff member will actually touch in the pilot: the marketing landing route, the guest hub, the auth flow (sign-in / magic-link claim / `/welcome`), the checkout flow (insurance offer card, FatZebra card form, receipt), and the admin portal (dashboard + `/admin/messages` + `/admin/bookings`).
+Run a full WCAG 2.1 AA pass across the four surfaces that a real guest or staff member will actually touch in the pilot: the marketing landing route, the guest hub, the auth flow (sign-in / magic-link claim / `/welcome`), the checkout flow (insurance offer card, Kovena MoR card form, receipt), and the admin portal (dashboard + `/admin/messages` + `/admin/bookings`).
 
 Tooling: `@axe-core/playwright` integrated into the existing E2E suite as a non-blocking advisory job (matches the Sprint 2-polish CI posture for Playwright), plus a manual pass with VoiceOver on iOS Safari and TalkBack on Android Chrome for the four guest-facing routes. Lighthouse accessibility score ≥ 95 on each route.
 
@@ -55,7 +55,7 @@ Create `docs/sprint-8-go-no-go.md` (drafted alongside this brief, populated thro
 
 - Any new feature work. If a fix turns into a feature, it gets logged and deferred to Sprint 9.
 - Real CoverMore production credentials. Stay on sandbox through pilot; production cutover is a post-launch Sprint 9 ticket once the policy-issuance volume justifies the contractual move.
-- Real FatZebra production credentials. Same posture — sandbox only this sprint. Pat has noted production cutover follows the same gate.
+- Real Kovena MoR production credentials. Same posture — sandbox only this sprint. Pat has noted production cutover follows the same gate.
 - Real HotelLink webhook wiring on Kovena's ops infrastructure (parallel ops track, not Koncie code).
 - Pilot hotel staff training materials and Namotu seed data polish — handled by other agents this week. Coordinate at the go/no-go.
 - SMS via Twilio (still parked from Sprint 6's out-of-scope).
@@ -133,4 +133,4 @@ The sprint is not done when the verification bar is green. It's done when `docs/
 
 ## Sprint 9 preview (not this sprint)
 
-Post-pilot. The shape depends entirely on what the first 30 days of Namotu data reveals. Likely candidates: CoverMore production cutover, FatZebra production cutover, Twilio SMS for the magic-link path on guests with no email-on-file, the second pilot hotel onboarded, HotelLink MODIFY/CANCEL/DATE_CHANGE webhooks, opt-out tracking for compliance. Real prioritisation happens at the post-pilot retro, not here.
+Post-pilot. The shape depends entirely on what the first 30 days of Namotu data reveals. Likely candidates: CoverMore production cutover, Kovena MoR production cutover, Twilio SMS for the magic-link path on guests with no email-on-file, the second pilot hotel onboarded, HotelLink MODIFY/CANCEL/DATE_CHANGE webhooks, opt-out tracking for compliance. Real prioritisation happens at the post-pilot retro, not here.

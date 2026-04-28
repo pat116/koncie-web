@@ -23,6 +23,7 @@ import type { Booking, Guest, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/prisma';
 import { signMagicLink } from '@/lib/auth/signed-link';
 import { sendMessage } from '@/lib/messaging/send';
+import { createBookingConfirmedNotification } from '@/lib/notifications/service';
 import {
   hotelLinkWebhookPayloadSchema,
   type HotelLinkWebhookPayload,
@@ -109,6 +110,19 @@ export async function ingestHotelLinkBooking(
   if (payload.status !== 'CONFIRMED') {
     return { guest, booking, messageLogId: null, skipped: 'non_confirmed_status' };
   }
+
+  // BOOKING_CONFIRMED notification (Sprint-6 completion §3.S6-09).
+  // Fires once per booking — service-level idempotency. Independent of the
+  // email-send dedupe below.
+  await createBookingConfirmedNotification({
+    bookingId: booking.id,
+    propertyName: property.name,
+    checkIn: booking.checkIn,
+    checkOut: booking.checkOut,
+  }).catch(() => {
+    // Notification creation failure is logged at the service layer; never
+    // block the email flow on it.
+  });
 
   const now = opts.now ?? new Date();
   const existing = await prisma.messageLog.findFirst({
