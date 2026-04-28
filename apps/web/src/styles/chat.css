@@ -1,0 +1,145 @@
+/*
+ * Chat surface design tokens (Sprint-6 polish, 2026-04-28).
+ * Source: Planning/2026-04-28-chat-ui-polish-brief.md §1.
+ *
+ * Imported from src/app/globals.css. All chat components reference these
+ * via `[var(--chat-...)]` arbitrary values — never hardcoded.
+ *
+ * Stylistic posture: phone-themed conversation surface that READS as a
+ * text-message at a glance but is unambiguously Koncie-branded. No iOS
+ * blue, no clock/battery/signal mock, no Apple bubble geometry. Trademark
+ * adjacency avoided; brand recognition wins (brief §0).
+ */
+
+:root {
+  /* ── colour ─────────────────────────────────────────────────────────── */
+  --chat-bg: #f4f2ec;
+  --chat-frame: #1a2a40;
+  --chat-frame-shadow: 0 24px 60px -20px rgba(26, 42, 64, 0.18),
+    0 8px 24px -8px rgba(26, 42, 64, 0.10);
+  --chat-status-bg: #ffffff;
+  --chat-status-text: #1a2a40;
+  --chat-status-pill: #e6efe3;
+  --chat-status-pill-text: #2d5c3a;
+  --chat-bubble-ai: #ffffff;
+  --chat-bubble-ai-text: #1a2a40;
+  --chat-bubble-ai-shadow: 0 1px 2px rgba(26, 42, 64, 0.06);
+  --chat-bubble-guest: #2d5c3a;
+  --chat-bubble-guest-text: #ffffff;
+  --chat-meta-text: rgba(26, 42, 64, 0.55);
+  --chat-divider: rgba(26, 42, 64, 0.10);
+  --chat-suggestion-bg: #ffffff;
+  --chat-suggestion-border: rgba(45, 92, 58, 0.20);
+  --chat-suggestion-text: #2d5c3a;
+  --chat-suggestion-active: #e6efe3;
+  --chat-input-bg: #ffffff;
+  --chat-input-border: rgba(26, 42, 64, 0.12);
+  --chat-input-placeholder: rgba(26, 42, 64, 0.40);
+  --chat-send-bg: #2d5c3a;
+  --chat-send-bg-disabled: rgba(45, 92, 58, 0.30);
+  --chat-card-bg: #fbfaf6;
+  --chat-card-border: rgba(26, 42, 64, 0.10);
+
+  /* ── typography (sizes only — colour/weight stays inline) ───────────── */
+  --chat-text-body: 16px;
+  --chat-text-header: 15px;
+  --chat-text-header-eyebrow: 11px;
+  --chat-text-meta: 11px;
+  --chat-text-meta-divider: 12px;
+  --chat-text-suggestion: 14px;
+  --chat-text-input: 16px;
+
+  /* ── spacing & radii ────────────────────────────────────────────────── */
+  --chat-frame-radius: 36px;
+  --chat-frame-max-width: 420px;
+  --chat-bubble-radius: 20px;
+  --chat-bubble-tail-radius: 6px;
+  --chat-bubble-padding-y: 10px;
+  --chat-bubble-padding-x: 14px;
+  --chat-bubble-gap: 4px;
+  --chat-bubble-group-gap: 12px;
+  --chat-suggestion-padding-y: 8px;
+  --chat-suggestion-padding-x: 14px;
+  --chat-suggestion-radius: 999px;
+  --chat-suggestion-strip-height: 48px;
+  --chat-input-radius: 999px;
+  --chat-input-height: 40px;
+  --chat-input-max-height: 96px;
+  --chat-send-radius: 999px;
+  --chat-send-size: 36px;
+  --chat-card-radius: 16px;
+  --chat-card-padding-y: 14px;
+  --chat-card-padding-x: 16px;
+  --chat-card-button-gap: 8px;
+}
+
+/* ── scrollbar-hide utility ──────────────────────────────────────────────
+ * Used by SuggestionChips' single-line horizontal scroll strip. The chips
+ * MUST never wrap (brief §2.3) — overflow-x-auto is the mechanism, but a
+ * visible scrollbar would break the phone aesthetic. */
+.scrollbar-hide {
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── typing-indicator dot animation ────────────────────────────────────
+ * Three dots bounce 200ms apart for a 1.4s loop. Used by TypingIndicator
+ * component (brief §2.6). */
+@keyframes chat-typing-dot {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
+
+.animate-chat-typing-dot-1 {
+  animation: chat-typing-dot 1.4s infinite;
+  animation-delay: 0s;
+}
+.animate-chat-typing-dot-2 {
+  animation: chat-typing-dot 1.4s infinite;
+  animation-delay: 0.2s;
+}
+.animate-chat-typing-dot-3 {
+  animation: chat-typing-dot 1.4s infinite;
+  animation-delay: 0.4s;
+}
+
+/* ── send-button slide-in animation ─────────────────────────────────────
+ * Plays when input transitions from empty to non-empty (brief §2.4). */
+@keyframes chat-send-show {
+  0% {
+    transform: translateX(8px) scale(0.85);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-chat-send-show {
+  animation: chat-send-show 160ms ease-out;
+}
+
+/* ── new-bubble enter animation ────────────────────────────────────────
+ * Currently unused on the server-rendered MessageList path — kept for the
+ * Phase-2 polled/live-update transition. */
+@keyframes chat-bubble-in {
+  0% {
+    transform: translateY(4px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
