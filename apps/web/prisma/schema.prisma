@@ -96,6 +96,10 @@ model Guest {
   email                 String            @unique
   firstName             String            @map("first_name")
   lastName              String            @map("last_name")
+  /// E.164 phone number. Nullable — pre-Sprint-6 bookings won't have one.
+  /// Used by the pre-arrival SMS path; the dispatcher skips guests without
+  /// a phone on file.
+  phone                 String?
   authUserId            String?           @unique @map("auth_user_id") @db.Uuid
   claimedAt             DateTime?         @map("claimed_at")
   bookings              Booking[]
@@ -126,6 +130,8 @@ model Booking {
   status       BookingStatus
   transactions Transaction[]
   messageLogs  MessageLog[]
+  conversation Conversation?
+  notifications Notification[]
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
 
@@ -351,6 +357,7 @@ enum MessageKind {
   INSURANCE_REMINDER_T3
   INSURANCE_RECEIPT
   HOTEL_BOOKING_CONFIRMED
+  PRE_ARRIVAL_SMS
   OTHER
 }
 
@@ -375,7 +382,10 @@ model MessageLog {
   booking           Booking?      @relation(fields: [bookingId], references: [id])
   kind              MessageKind
   templateId        String        @map("template_id")
-  recipientEmail    String        @map("recipient_email")
+  /// Email rows populate this; SMS rows leave it null and use recipientPhone.
+  recipientEmail    String?       @map("recipient_email")
+  /// SMS rows populate this with E.164. Email rows leave it null.
+  recipientPhone    String?       @map("recipient_phone")
   subject           String
   status            MessageStatus @default(QUEUED)
   providerMessageId String?       @unique @map("provider_message_id")
@@ -390,4 +400,70 @@ model MessageLog {
   @@index([bookingId, createdAt])
   @@index([kind, status, createdAt])
   @@map("message_logs")
+}
+
+// ─── Sprint 6 completion (Twilio SMS, chat surface, notifications) ──────────
+
+enum NotificationKind {
+  BOOKING_CONFIRMED
+  FLIGHT_TIME_CHANGED
+  WELCOME_TO_RESORT
+}
+
+/// Guest-thread persistence for the /c/[token] chat surface. One per Booking.
+/// SEPARATE from MessageLog (the outbound delivery audit) — these two layers
+/// do not import each other. SMS dispatch writes a MessageLog row; the chat
+/// thread starts when the guest opens /c/[token] and the AI greeting renders
+/// (gated by greeting_sent_at).
+model Conversation {
+  id             String        @id @default(uuid()) @db.Uuid
+  bookingId      String        @unique @map("booking_id") @db.Uuid
+  booking        Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  /// "pre_arrival" (Sprint 6); future: "in_stay" | "post_stay".
+  kind           String        @default("pre_arrival")
+  greetingSentAt DateTime?     @map("greeting_sent_at") @db.Timestamptz
+  messages       ChatMessage[]
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("conversations")
+}
+
+model ChatMessage {
+  id             String       @id @default(uuid()) @db.Uuid
+  conversationId String       @map("conversation_id") @db.Uuid
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  /// "guest" | "ai".
+  sender         String
+  body           String
+  /// [{ kind: "download_card" } | { kind: "register_cta", reason: string }]
+  attachments    Json         @default("[]")
+  sentAt         DateTime     @default(now()) @map("sent_at") @db.Timestamptz
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([conversationId, sentAt])
+  @@map("chat_messages")
+}
+
+/// Polled notifications surfaced in the bell-dropdown on the Non-User Hub.
+/// Three kinds: BOOKING_CONFIRMED (booking-confirmed event), FLIGHT_TIME_CHANGED
+/// (JetSeeker webhook), WELCOME_TO_RESORT (check-in cron).
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  bookingId String           @map("booking_id") @db.Uuid
+  booking   Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  kind      NotificationKind
+  title     String
+  body      String
+  /// { label: "View Itinerary", href: "/hub/trip" }
+  inlineCta Json?            @map("inline_cta")
+  read      Boolean          @default(false)
+  metadata  Json             @default("{}")
+  readAt    DateTime?        @map("read_at") @db.Timestamptz
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([bookingId, createdAt])
+  @@index([bookingId, read])
+  @@map("notifications")
 }

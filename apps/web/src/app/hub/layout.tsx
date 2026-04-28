@@ -1,4 +1,5 @@
 import { BottomNav } from '@/components/hub/bottom-nav';
+import { BellSlot } from '@/components/hub/BellSlot';
 
 export default function HubLayout({
   children,
@@ -9,8 +10,11 @@ export default function HubLayout({
     <div className="min-h-screen bg-koncie-sand pb-20">
       <header className="flex items-center justify-between bg-koncie-navy px-5 py-4">
         <h1 className="font-semibold text-white">Koncie</h1>
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-koncie-green font-bold text-koncie-navy">
-          J
+        <div className="flex items-center gap-3">
+          <BellSlot />
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-koncie-green font-bold text-koncie-navy">
+            J
+          </div>
         </div>
       </header>
       <main id="main-content" tabIndex={-1} className="mx-auto max-w-md outline-none">{children}</main>
