@@ -14,7 +14,6 @@
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db/prisma';
 import { verifyChatToken, ChatTokenError } from '@/lib/chat/tokens';
-import { setChatSessionCookie } from '@/lib/chat/session';
 import {
   getOrCreateConversation,
   getMessages,
@@ -106,7 +105,10 @@ export default async function ChatTokenPage({
     await markGreetingSent(conv.id);
   }
 
-  await setChatSessionCookie({ bookingId, conversationId: conv.id });
+  // The chat-scoped session cookie is written by middleware
+  // (apps/web/src/middleware.ts) — Server Components can't call
+  // cookies().set(). The READ path (server actions) still goes through
+  // readChatSessionCookie.
 
   const rows = await getMessages(conv.id, { limit: 50 });
   const messages: MessageView[] = rows.map((r) => ({
