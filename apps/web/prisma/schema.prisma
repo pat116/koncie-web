@@ -82,9 +82,10 @@ model Property {
   timezone             String
   partnerIntegrationId String             @map("partner_integration_id") @db.Uuid
   partnerIntegration   PartnerIntegration @relation(fields: [partnerIntegrationId], references: [id])
-  bookings             Booking[]
+  hotelBookings             HotelBooking[]
   upsells              Upsell[]
   adminUsers           AdminUser[]
+  images               PropertyImage[]
   createdAt            DateTime           @default(now()) @map("created_at")
   updatedAt            DateTime           @updatedAt @map("updated_at")
 
@@ -102,7 +103,7 @@ model Guest {
   phone                 String?
   authUserId            String?           @unique @map("auth_user_id") @db.Uuid
   claimedAt             DateTime?         @map("claimed_at")
-  bookings              Booking[]
+  hotelBookings              HotelBooking[]
   transactions          Transaction[]
   savedCards            SavedCard[]
   flightBookings        FlightBooking[]
@@ -111,13 +112,14 @@ model Guest {
   insurancePolicies     InsurancePolicy[]
   insuranceLastSyncedAt DateTime?         @map("insurance_last_synced_at") @db.Timestamptz
   messageLogs           MessageLog[]
+  trips                 Trip[]
   createdAt             DateTime          @default(now()) @map("created_at")
   updatedAt             DateTime          @updatedAt @map("updated_at")
 
   @@map("guests")
 }
 
-model Booking {
+model HotelBooking {
   id           String        @id @default(uuid()) @db.Uuid
   guestId      String        @map("guest_id") @db.Uuid
   guest        Guest         @relation(fields: [guestId], references: [id])
@@ -128,14 +130,45 @@ model Booking {
   checkOut     DateTime      @map("check_out") @db.Date
   numGuests    Int           @map("num_guests")
   status       BookingStatus
+
+  // ─── Sprint 7 enrichment (S7-03) ──
+  // Room descriptors — all nullable to backfill safely from existing rows.
+  roomTypeName       String?  @map("room_type_name")
+  roomTypeCode       String?  @map("room_type_code")
+  bedConfig          String?  @map("bed_config")
+  view               String?
+  unitSqm            Int?     @map("unit_sqm")
+  amenities          String[] @default([])
+  specialFeatures    String[] @default([]) @map("special_features")
+  // Pricing snapshot — captured from HotelLink at ingest. Currency is
+  // ISO-4217 alpha-3; nullable for legacy rows that pre-date the snapshot.
+  pricePerNightMinor Int?     @map("price_per_night_minor")
+  subtotalMinor      Int?     @map("subtotal_minor")
+  feesTaxesMinor     Int?     @map("fees_taxes_minor")
+  totalPaidMinor     Int?     @map("total_paid_minor")
+  currency           String?  @db.Char(3)
+  // Confirmation number is the carrier-issued PNR-equivalent for the stay;
+  // distinct from `externalRef` which is the HotelLink booking id.
+  confirmationNumber String?  @map("confirmation_number")
+  // Guest home address — used to infer Trip.originAirportIata.
+  // Shape: { country, stateOrRegion, city, postcode, line1?, line2? }.
+  // Optional in the HotelLink payload (Sprint 7 codes defensively per
+  // kickoff §6 #1) — null until the HotelLink team confirms the field.
+  address            Json?
+  // Raw HotelLink payload for diagnostic + replay. Sprint 7 ingest writes
+  // the full inbound shape here so structured columns can be re-derived
+  // without re-receiving events.
+  rawPayload         Json     @default("{}") @map("raw_payload")
+
   transactions Transaction[]
   messageLogs  MessageLog[]
   conversation Conversation?
   notifications Notification[]
+  trip         Trip?
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
 
-  @@map("bookings")
+  @@map("hotel_bookings")
 }
 
 // ─── Sprint 2 models ─────────────────────────────────────────────────────────
@@ -201,7 +234,7 @@ model Transaction {
   guestId                 String              @map("guest_id") @db.Uuid
   guest                   Guest               @relation(fields: [guestId], references: [id])
   bookingId               String              @map("booking_id") @db.Uuid
-  booking                 Booking             @relation(fields: [bookingId], references: [id])
+  hotelBooking                 HotelBooking             @relation(fields: [bookingId], references: [id])
   upsellId                String              @map("upsell_id") @db.Uuid
   upsell                  Upsell              @relation(fields: [upsellId], references: [id])
   savedCardId             String?             @map("saved_card_id") @db.Uuid
@@ -227,10 +260,17 @@ model Transaction {
 
   @@index([guestId, createdAt])
   @@index([providerPaymentRef])
+  additionalBookingLine AdditionalBookingLine?
   @@map("transactions")
 }
 
 // ─── Sprint 3 models ─────────────────────────────────────────────────────────
+
+enum FlightSegmentStatus {
+  CONFIRMED
+  TIME_CHANGED
+  CANCELLED
+}
 
 model FlightBooking {
   id              String           @id @default(uuid()) @db.Uuid
@@ -243,7 +283,34 @@ model FlightBooking {
   returnAt        DateTime?        @map("return_at") @db.Timestamptz
   carrier         String           @db.Char(2)
   metadata        Json             @default("{}")
+
+  // ─── Sprint 7 enrichment (S7-04) ──
+  // Outbound leg — populated on every ingest; status defaults to CONFIRMED.
+  outboundFlightNumber        String?              @map("outbound_flight_number")
+  outboundGate                String?              @map("outbound_gate")
+  outboundTerminal            String?              @map("outbound_terminal")
+  outboundStatus              FlightSegmentStatus  @default(CONFIRMED) @map("outbound_status")
+  // Original departure is stamped when a TIME_CHANGED webhook lands so the
+  // UI can render the strike-through "was 09:00, now 11:30" pattern.
+  outboundOriginalDepartureAt DateTime?            @map("outbound_original_departure_at") @db.Timestamptz
+  outboundChangedAt           DateTime?            @map("outbound_changed_at") @db.Timestamptz
+  outboundChangeReason        String?              @map("outbound_change_reason")
+  // Return leg — optional. Status nullable since one-way trips skip it.
+  returnFlightNumber          String?              @map("return_flight_number")
+  returnGate                  String?              @map("return_gate")
+  returnTerminal              String?              @map("return_terminal")
+  returnStatus                FlightSegmentStatus? @map("return_status")
+  returnOriginalDepartureAt   DateTime?            @map("return_original_departure_at") @db.Timestamptz
+  returnChangedAt             DateTime?            @map("return_changed_at") @db.Timestamptz
+  returnChangeReason          String?              @map("return_change_reason")
+  // PNR = the carrier's record-locator. Distinct from `externalRef` which is
+  // the JetSeeker-assigned id.
+  pnr                         String?
+  // Raw JetSeeker payload — see S7-14 for the live-wire contract.
+  rawPayload                  Json                 @default("{}") @map("raw_payload")
+
   insuranceQuotes InsuranceQuote[]
+  trip            Trip?
   createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz
   updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -379,7 +446,7 @@ model MessageLog {
   guestId           String?       @map("guest_id") @db.Uuid
   guest             Guest?        @relation(fields: [guestId], references: [id])
   bookingId         String?       @map("booking_id") @db.Uuid
-  booking           Booking?      @relation(fields: [bookingId], references: [id])
+  hotelBooking           HotelBooking?      @relation(fields: [bookingId], references: [id])
   kind              MessageKind
   templateId        String        @map("template_id")
   /// Email rows populate this; SMS rows leave it null and use recipientPhone.
@@ -410,7 +477,7 @@ enum NotificationKind {
   WELCOME_TO_RESORT
 }
 
-/// Guest-thread persistence for the /c/[token] chat surface. One per Booking.
+/// Guest-thread persistence for the /c/[token] chat surface. One per HotelBooking.
 /// SEPARATE from MessageLog (the outbound delivery audit) — these two layers
 /// do not import each other. SMS dispatch writes a MessageLog row; the chat
 /// thread starts when the guest opens /c/[token] and the AI greeting renders
@@ -418,7 +485,7 @@ enum NotificationKind {
 model Conversation {
   id             String        @id @default(uuid()) @db.Uuid
   bookingId      String        @unique @map("booking_id") @db.Uuid
-  booking        Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  hotelBooking        HotelBooking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   /// "pre_arrival" (Sprint 6); future: "in_stay" | "post_stay".
   kind           String        @default("pre_arrival")
   greetingSentAt DateTime?     @map("greeting_sent_at") @db.Timestamptz
@@ -451,7 +518,7 @@ model ChatMessage {
 model Notification {
   id        String           @id @default(uuid()) @db.Uuid
   bookingId String           @map("booking_id") @db.Uuid
-  booking   Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  hotelBooking   HotelBooking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   kind      NotificationKind
   title     String
   body      String
@@ -466,4 +533,255 @@ model Notification {
   @@index([bookingId, createdAt])
   @@index([bookingId, read])
   @@map("notifications")
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Sprint 7 models — Trip / Cart / Recommendation / AdditionalBookingLine /
+// PropertyImage. See Planning/2026-04-25-sprint-7-trip-data-model.md for the
+// architecture spec; Planning/2026-04-28-sprint-7-broader-data-model-kickoff.md
+// for the per-ticket breakdown.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ─── enums (S7-01, S7-05, S7-06, S7-08) ──────────────────────────────────────
+
+enum TripPhase {
+  PRE_CONFIRMATION
+  PRE_ARRIVAL
+  IN_STAY
+  POST_STAY
+}
+
+enum PreparationStepStatus {
+  PENDING
+  COMPLETE
+  NA
+}
+
+enum CartState {
+  OPEN
+  LOCKED_FOR_CHECKOUT
+  CLOSED
+}
+
+enum CartItemKind {
+  FLIGHT
+  TRANSFER
+  ACTIVITY
+  DINING
+  OTHER
+}
+
+enum CartItemProvider {
+  JETSEEKER
+  VIATOR
+  INTERNAL
+  OTHER
+}
+
+enum CartPriceUnit {
+  PER_PERSON
+  PER_UNIT
+  FIXED
+}
+
+enum RecommendationKind {
+  ACTIVITY
+  RESTAURANT
+  ATTRACTION
+  EXPERIENCE
+}
+
+enum PriceTier {
+  BUDGET
+  MODERATE
+  PREMIUM
+}
+
+enum RecommendationSourceProvider {
+  VIATOR
+  INTERNAL_DB
+  EXTERNAL
+}
+
+enum PropertyImageKind {
+  HERO
+  UNIT
+  GALLERY
+  AMENITY
+}
+
+// ─── S7-08: PropertyImage sidecar table ──────────────────────────────────────
+
+model PropertyImage {
+  id           String            @id @default(uuid()) @db.Uuid
+  propertyId   String            @map("property_id") @db.Uuid
+  property     Property          @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  imageUrl     String            @map("image_url")
+  caption      String?
+  displayOrder Int               @default(0) @map("display_order")
+  kind         PropertyImageKind @default(GALLERY)
+  isActive     Boolean           @default(true) @map("is_active")
+  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime          @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("property_images")
+}
+
+// ─── S7-01: Trip model ───────────────────────────────────────────────────────
+// One Trip per HotelBooking (1:1). Group bookings on one HotelBooking are one
+// Trip with one shared cart (kickoff §12.3 lock).
+
+model Trip {
+  id                     String                @id @default(uuid()) @db.Uuid
+  slug                   String                @unique
+  guestId                String                @map("guest_id") @db.Uuid
+  guest                  Guest                 @relation(fields: [guestId], references: [id])
+  hotelBookingId         String                @unique @map("hotel_booking_id") @db.Uuid
+  hotelBooking           HotelBooking          @relation(fields: [hotelBookingId], references: [id])
+  flightBookingId        String?               @unique @map("flight_booking_id") @db.Uuid
+  flightBooking          FlightBooking?        @relation(fields: [flightBookingId], references: [id])
+  // IATA derived from the guest's home address postcode; null until address
+  // arrives (kickoff §6 #1 lock — defensive).
+  originAirportIata      String?               @map("origin_airport_iata") @db.Char(3)
+  startDate              DateTime              @map("start_date") @db.Date
+  endDate                DateTime              @map("end_date") @db.Date
+  // `nights` is a generated column at the DB level — see migration #2.
+  nights                 Int
+  phase                  TripPhase             @default(PRE_ARRIVAL)
+  phaseComputedAt        DateTime              @default(now()) @map("phase_computed_at") @db.Timestamptz
+  completionPercent      Int                   @default(0) @map("completion_percent")
+  preparationStatus      Json                  @map("preparation_status")
+  metadata               Json                  @default("{}")
+  cart                   Cart?
+  recommendations        Recommendation[]
+  additionalBookingLines AdditionalBookingLine[]
+  createdAt              DateTime              @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt              DateTime              @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([guestId, startDate])
+  @@index([phase])
+  @@map("trips")
+}
+
+// ─── S7-05: Cart + CartItem ──────────────────────────────────────────────────
+// Per-Trip, not per-User. Partial unique index in migration enforces ≤1 OPEN
+// cart per Trip (kickoff §12.3 lock).
+
+model Cart {
+  id            String     @id @default(uuid()) @db.Uuid
+  tripId        String     @map("trip_id") @db.Uuid
+  trip          Trip       @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  state         CartState  @default(OPEN)
+  subtotalMinor Int        @default(0) @map("subtotal_minor")
+  currency      String?    @db.Char(3)
+  lockedAt      DateTime?  @map("locked_at") @db.Timestamptz
+  closedAt      DateTime?  @map("closed_at") @db.Timestamptz
+  // 15-minute pilot default per kickoff §6 #6 lock.
+  lockExpiresAt DateTime?  @map("lock_expires_at") @db.Timestamptz
+  items         CartItem[]
+  createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime   @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Partial unique on OPEN state lives in the migration SQL, not @@unique.
+  @@unique([tripId, id])
+  @@index([tripId])
+  @@map("carts")
+}
+
+model CartItem {
+  id                        String           @id @default(uuid()) @db.Uuid
+  cartId                    String           @map("cart_id") @db.Uuid
+  cart                      Cart             @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  kind                      CartItemKind
+  provider                  CartItemProvider
+  providerItemId            String           @map("provider_item_id")
+  title                     String
+  description               String?
+  imageUrl                  String?          @map("image_url")
+  unitPriceMinor            Int              @map("unit_price_minor")
+  priceUnit                 CartPriceUnit    @default(PER_UNIT) @map("price_unit")
+  qty                       Int              @default(1)
+  // Multi-currency: per-line source-currency capture + AUD-display fields.
+  // OpenExchangeRates is the FX provider (kickoff §12.3 lock); 100 bps margin
+  // is the default (kickoff §12.3 lock). fxLockedAt freezes the rate at add.
+  sourceCurrency            String           @map("source_currency") @db.Char(3)
+  sourceAmountMinor         Int              @map("source_amount_minor")
+  displayAmountAudMinor     Int              @map("display_amount_aud_minor")
+  fxRateUsed                Decimal          @default(1) @map("fx_rate_used") @db.Decimal(18, 8)
+  fxProvider                String           @default("openexchangerates") @map("fx_provider")
+  fxLockedAt                DateTime         @default(now()) @map("fx_locked_at") @db.Timestamptz
+  fxMarginBps               Int              @default(100) @map("fx_margin_bps")
+  lineTotalMinor            Int              @map("line_total_minor")
+  scheduledAt               DateTime?        @map("scheduled_at") @db.Timestamptz
+  metadata                  Json             @default("{}")
+  addedAt                   DateTime         @default(now()) @map("added_at") @db.Timestamptz
+  addedFromRecommendationId String?          @map("added_from_recommendation_id") @db.Uuid
+  addedFromRecommendation   Recommendation?  @relation(fields: [addedFromRecommendationId], references: [id])
+
+  @@index([cartId])
+  @@map("cart_items")
+}
+
+// ─── S7-06: Recommendation ───────────────────────────────────────────────────
+// Storage shape only this sprint. Recommender service = Sprint 9.
+
+model Recommendation {
+  id                        String                       @id @default(uuid()) @db.Uuid
+  tripId                    String                       @map("trip_id") @db.Uuid
+  trip                      Trip                         @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  kind                      RecommendationKind
+  title                     String
+  description               String?
+  rating                    Decimal?                     @db.Decimal(2, 1)
+  reviewCount               Int?                         @map("review_count")
+  whyRecommended            String?                      @map("why_recommended")
+  priceTier                 PriceTier?                   @map("price_tier")
+  priceFromMinor            Int?                         @map("price_from_minor")
+  currency                  String?                      @db.Char(3)
+  durationMinutes           Int?                         @map("duration_minutes")
+  distanceFromResortMinutes Int?                         @map("distance_from_resort_minutes")
+  availableDates            DateTime[]                   @default([]) @map("available_dates") @db.Date
+  availableTimes            String[]                     @default([]) @map("available_times")
+  tags                      String[]                     @default([])
+  categories                String[]                     @default([])
+  sourceProvider            RecommendationSourceProvider @map("source_provider")
+  sourceProviderItemId      String?                      @map("source_provider_item_id")
+  imageUrl                  String?                      @map("image_url")
+  // `score` populated by the Sprint-9 recommender; nullable until then.
+  score                     Decimal?                     @db.Decimal(5, 2)
+  savedForLater             Boolean                      @default(false) @map("saved_for_later")
+  cartItems                 CartItem[]
+  createdAt                 DateTime                     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt                 DateTime                     @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([tripId])
+  @@map("recommendations")
+}
+
+// ─── S7-07: AdditionalBookingLine ────────────────────────────────────────────
+// Empty table this sprint; Sprint 8 populates on checkout commit.
+
+model AdditionalBookingLine {
+  id             String           @id @default(uuid()) @db.Uuid
+  tripId         String           @map("trip_id") @db.Uuid
+  trip           Trip             @relation(fields: [tripId], references: [id])
+  kind           CartItemKind
+  provider       CartItemProvider
+  providerItemId String           @map("provider_item_id")
+  // 1:1 with Transaction — at most one ABL per transaction.
+  transactionId  String?          @unique @map("transaction_id") @db.Uuid
+  transaction    Transaction?     @relation(fields: [transactionId], references: [id])
+  title          String
+  scheduledAt    DateTime?        @map("scheduled_at") @db.Timestamptz
+  amountMinor    Int              @map("amount_minor")
+  currency       String           @db.Char(3)
+  // status left as TEXT for Sprint 7 — Sprint 8 may convert to an enum.
+  status         String
+  metadata       Json             @default("{}")
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([tripId])
+  @@map("additional_booking_lines")
 }

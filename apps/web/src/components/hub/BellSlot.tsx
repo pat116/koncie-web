@@ -22,11 +22,11 @@ export async function BellSlot() {
       ? { OR: [{ authUserId: userResult.user.id }, { email: userResult.user.email ?? '' }] }
       : { email: userResult.user.email ?? '' },
     include: {
-      bookings: { orderBy: { checkIn: 'asc' }, take: 1 },
+      hotelBookings: { orderBy: { checkIn: 'asc' }, take: 1 },
     },
   });
-  if (!guest || guest.bookings.length === 0) return null;
-  const booking = guest.bookings[0]!;
+  if (!guest || guest.hotelBookings.length === 0) return null;
+  const booking = guest.hotelBookings[0]!;
 
   const rows = await listNotificationsForBooking(booking.id);
   const initial: NotificationView[] = rows.map((r) => ({

@@ -65,14 +65,17 @@ export function verifyJetSeekerSignature(input: {
 export async function applyJetSeekerTimeChange(
   payload: TimeChangePayload,
 ): Promise<TimeChangeOutcome> {
-  const { flight_booking: fb, occurred_at } = payload;
+  const { flight_booking: fb, occurred_at: _occurredAt } = payload;
   const orderId = String(fb.jetseeker_order_id);
-  const providerEventKey = `${orderId}:${occurred_at}`;
+  // Sprint 7 (S7-14): notification dedupe across replays AND carrier reversals
+  // is per (bookingId, jetseekerOrderId). A reversal carries a different
+  // occurred_at but updates the same flight — the bell-dropdown surfaces the
+  // latest change once (kickoff §3.S7-14 AC).
+  const providerEventKey = orderId;
 
-  // Resolve the FlightBooking by (guestEmail → guestId) + pnr-in-rawPayload.
-  // For Sprint-6 scaffold we accept either a metadata-pnr match or the
-  // FlightBooking.externalRef as a stand-in. Live wire-up will use the
-  // FlightBooking.pnr column added in the Sprint-7 data-model push.
+  // Resolve guest → flight → booking. Any miss queues for now (kickoff §6 #3
+  // lock — failure mode benign; structured columns stay null until parser
+  // is updated).
   const guest = await prisma.guest.findUnique({
     where: { email: fb.guest_email },
     select: { id: true },
@@ -82,22 +85,54 @@ export async function applyJetSeekerTimeChange(
   const flight = await prisma.flightBooking.findFirst({
     where: {
       guestId: guest.id,
-      OR: [{ externalRef: fb.pnr }],
+      OR: [{ externalRef: fb.pnr }, { pnr: fb.pnr }],
     },
   });
   if (!flight) return { kind: 'queued', reason: 'unknown_pnr_or_email' };
 
-  // Resolve a Booking for the same guest. The notification model is
-  // booking-scoped; pick the next upcoming hotel booking. For pilot
-  // demos this is the only HotelBooking the guest has.
-  const booking = await prisma.booking.findFirst({
+  const booking = await prisma.hotelBooking.findFirst({
     where: { guestId: guest.id, status: 'CONFIRMED' },
     orderBy: { checkIn: 'asc' },
   });
   if (!booking) return { kind: 'queued', reason: 'unknown_pnr_or_email' };
 
+  // Sprint 7 (S7-14) live-wire — persist the inbound payload + structured
+  // outbound columns. Failure to derive structured columns is non-fatal:
+  // raw_payload is the source of truth; structured columns can be back-filled.
+  // For Sprint 7 we treat every inbound time-change event as outbound-leg
+  // — the payload schema doesn't carry leg metadata yet (Symfony team
+  // hasn't confirmed). Sprint 8 will route to return* fields when leg info
+  // arrives.
+  try {
+    const newDepartureUtc = new Date(fb.new_departure_local);
+    const updateData: Record<string, unknown> = {
+      rawPayload: payload as unknown,
+      outboundStatus: 'TIME_CHANGED',
+      outboundChangedAt: new Date(),
+      outboundChangeReason: fb.reason_code ?? null,
+    };
+    // Stamp originalDepartureAt only on the FIRST change — preserves the
+    // delta for the strike-through display even after a reversal.
+    if (!flight.outboundOriginalDepartureAt) {
+      updateData.outboundOriginalDepartureAt = flight.departureAt;
+    }
+    // Reflect the new wall-clock time on departureAt. Treating the local
+    // string as UTC for now (carrier-tz handling is a follow-up); the
+    // original instant stays in outboundOriginalDepartureAt.
+    if (!Number.isNaN(newDepartureUtc.getTime())) {
+      updateData.departureAt = newDepartureUtc;
+    }
+    await prisma.flightBooking.update({
+      where: { id: flight.id },
+      data: updateData,
+    });
+  } catch {
+    // Update failure is non-fatal — the notification path still runs so
+    // the user is informed. Sentry capture happens at the route handler.
+  }
+
   const created = await createFlightTimeChangedNotification({
-    booking,
+    hotelBooking: booking,
     flight,
     oldDepartureLocal: fb.old_departure_local,
     newDepartureLocal: fb.new_departure_local,

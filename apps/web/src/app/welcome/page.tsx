@@ -23,7 +23,7 @@ export default async function WelcomePage({ searchParams }: PageProps) {
     throw e;
   }
 
-  const booking = await prisma.booking.findUnique({
+  const booking = await prisma.hotelBooking.findUnique({
     where: { id: payload.bookingId },
     include: { guest: true, property: true },
   });

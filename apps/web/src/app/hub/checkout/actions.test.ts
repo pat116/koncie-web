@@ -56,7 +56,7 @@ describe('purchaseUpsell happy path', () => {
         providerPayoutPct: '85.00',
       }),
     };
-    (prisma as any).booking = {
+    (prisma as any).hotelBooking = {
       findUnique: vi.fn().mockResolvedValue({ id: 'b1', guestId: 'g1', propertyId: 'p1' }),
     };
     const txRun = vi.fn().mockImplementation(async (cb) => cb(prisma));
@@ -117,7 +117,7 @@ describe('purchaseUpsell decline path', () => {
         providerPayoutPct: '85.00',
       }),
     };
-    (prisma as any).booking = {
+    (prisma as any).hotelBooking = {
       findUnique: vi.fn().mockResolvedValue({ id: 'b1', guestId: 'g1', propertyId: 'p1' }),
     };
     (prisma as any).$transaction = vi.fn();

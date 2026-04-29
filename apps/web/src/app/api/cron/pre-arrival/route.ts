@@ -45,7 +45,7 @@ function isAuthorized(request: NextRequest): boolean {
 
 function windowForDaysAway(now: Date, days: number): { from: Date; to: Date } {
   // Each ±12h window — catches guests whose checkIn date-part is `days` away
-  // regardless of the time-of-day semantics of Booking.checkIn (stored as
+  // regardless of the time-of-day semantics of HotelBooking.checkIn (stored as
   // @db.Date). With Date at 00:00 UTC, a 12h half-width reliably hits the
   // intended calendar day for all TZ offsets we care about.
   const center = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
   };
 
   // ─── T-7 upsell reminder ────────────────────────────────────────────────
-  const t7Bookings = await prisma.booking.findMany({
+  const t7Bookings = await prisma.hotelBooking.findMany({
     where: {
       status: 'CONFIRMED',
       checkIn: { gte: t7Window.from, lt: t7Window.to },
@@ -152,7 +152,7 @@ export async function GET(request: NextRequest) {
   }
 
   // ─── T-3 insurance reminder ─────────────────────────────────────────────
-  const t3Bookings = await prisma.booking.findMany({
+  const t3Bookings = await prisma.hotelBooking.findMany({
     where: {
       status: 'CONFIRMED',
       checkIn: { gte: t3Window.from, lt: t3Window.to },
@@ -199,7 +199,7 @@ export async function GET(request: NextRequest) {
   // ─── T-3 pre-arrival SMS ─────────────────────────────────────────────────
   // Same T-3 window as the insurance reminder. Independent of insurance
   // state — every confirmed booking with a phone gets the chat-hook SMS.
-  const smsBookings = await prisma.booking.findMany({
+  const smsBookings = await prisma.hotelBooking.findMany({
     where: {
       status: 'CONFIRMED',
       checkIn: { gte: t3Window.from, lt: t3Window.to },
@@ -255,7 +255,7 @@ export async function GET(request: NextRequest) {
 
   // ─── T-0 WELCOME_TO_RESORT notification ──────────────────────────────────
   // No comms — bell-dropdown notification only.
-  const t0Bookings = await prisma.booking.findMany({
+  const t0Bookings = await prisma.hotelBooking.findMany({
     where: {
       status: 'CONFIRMED',
       checkIn: { gte: t0Window.from, lt: t0Window.to },
@@ -265,7 +265,7 @@ export async function GET(request: NextRequest) {
   for (const booking of t0Bookings) {
     try {
       const created = await createWelcomeToResortNotification({
-        booking,
+        hotelBooking: booking,
       });
       if (created) counts.welcomeNotifications += 1;
       else counts.skipped += 1;

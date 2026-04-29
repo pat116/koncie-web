@@ -4,7 +4,7 @@ import type { Transaction } from '@prisma/client';
 export type UpsellCsvRow = Transaction & {
   guest: { email: string; firstName: string; lastName: string };
   upsell: { name: string; category: string };
-  booking: { externalRef: string };
+  hotelBooking: { externalRef: string };
 };
 
 const CSV_HEADERS = [
@@ -51,7 +51,7 @@ export function formatMoneyMajor(minor: number): string {
 export function upsellRowToCsv(row: UpsellCsvRow): string {
   return [
     row.id,
-    row.booking.externalRef,
+    row.hotelBooking.externalRef,
     row.guest.email,
     `${row.guest.firstName} ${row.guest.lastName}`,
     row.upsell.name,

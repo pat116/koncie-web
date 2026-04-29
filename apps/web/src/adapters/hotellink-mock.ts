@@ -16,6 +16,39 @@
  */
 import { z } from 'zod';
 
+// Sprint 7 (S7-12) extends the payload with optional enrichment fields:
+// guest.address (for origin-airport inference), room descriptors, pricing
+// snapshot, confirmationNumber. All optional so the existing minimal payload
+// still validates — the kickoff §6 #1 "code defensively" lock applies until
+// the HotelLink team confirms which fields are populated.
+
+const addressSchema = z.object({
+  country: z.string().min(2).max(60).optional().nullable(),
+  stateOrRegion: z.string().optional().nullable(),
+  city: z.string().optional().nullable(),
+  postcode: z.string().optional().nullable(),
+  line1: z.string().optional().nullable(),
+  line2: z.string().optional().nullable(),
+}).partial();
+
+const roomSchema = z.object({
+  name: z.string().optional().nullable(),
+  code: z.string().optional().nullable(),
+  bedConfig: z.string().optional().nullable(),
+  view: z.string().optional().nullable(),
+  sqm: z.number().int().positive().optional().nullable(),
+  amenities: z.array(z.string()).optional().nullable(),
+  specialFeatures: z.array(z.string()).optional().nullable(),
+}).partial();
+
+const pricingSchema = z.object({
+  currency: z.string().length(3).optional().nullable(),
+  pricePerNightMinor: z.number().int().nonnegative().optional().nullable(),
+  subtotalMinor: z.number().int().nonnegative().optional().nullable(),
+  feesTaxesMinor: z.number().int().nonnegative().optional().nullable(),
+  totalPaidMinor: z.number().int().nonnegative().optional().nullable(),
+}).partial();
+
 export const hotelLinkWebhookPayloadSchema = z.object({
   bookingRef: z.string().min(1),
   propertySlug: z.string().min(1),
@@ -23,11 +56,17 @@ export const hotelLinkWebhookPayloadSchema = z.object({
     email: z.string().email(),
     firstName: z.string().min(1),
     lastName: z.string().min(1),
+    // Optional address — null-tolerant downstream per kickoff §6 #1 lock.
+    address: addressSchema.optional().nullable(),
   }),
   checkIn: z.string().datetime(),
   checkOut: z.string().datetime(),
   numGuests: z.number().int().min(1),
   status: z.enum(['CONFIRMED', 'CANCELLED', 'COMPLETED']),
+  // Sprint 7 enrichments — all optional.
+  room: roomSchema.optional().nullable(),
+  pricing: pricingSchema.optional().nullable(),
+  confirmationNumber: z.string().optional().nullable(),
 });
 
 export type HotelLinkWebhookPayload = z.infer<typeof hotelLinkWebhookPayloadSchema>;

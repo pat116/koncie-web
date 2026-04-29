@@ -29,7 +29,7 @@ export type FireMagicLinkResult =
 export async function fireMagicLinkForBooking(
   input: FireMagicLinkInput,
 ): Promise<FireMagicLinkResult> {
-  const booking = await prisma.booking.findUnique({
+  const booking = await prisma.hotelBooking.findUnique({
     where: { id: input.bookingId },
     include: { guest: true, property: true },
   });

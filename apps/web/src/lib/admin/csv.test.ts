@@ -67,7 +67,7 @@ const row: UpsellCsvRow = {
   updatedAt: new Date('2026-04-20T10:00:01Z'),
   guest: { email: 'jane@demo.com', firstName: 'Jane', lastName: 'Demo' },
   upsell: { name: 'Sunset sail', category: 'ACTIVITY' },
-  booking: { externalRef: 'HL-84321-NMT' },
+  hotelBooking: { externalRef: 'HL-84321-NMT' },
 };
 
 describe('upsellRowToCsv', () => {

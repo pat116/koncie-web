@@ -41,9 +41,9 @@ export async function purchaseUpsell(raw: PurchaseInput): Promise<void> {
   }
 
   // 1. Load domain context + verify guest owns this booking and upsell is active.
-  const booking = await prisma.booking.findUnique({ where: { id: input.bookingId } });
+  const booking = await prisma.hotelBooking.findUnique({ where: { id: input.bookingId } });
   if (!booking || booking.guestId !== input.guestId) {
-    throw new PaymentValidationError('Booking not found or not owned by this guest');
+    throw new PaymentValidationError('HotelBooking not found or not owned by this guest');
   }
 
   const upsell = await prisma.upsell.findUnique({ where: { id: input.upsellId } });

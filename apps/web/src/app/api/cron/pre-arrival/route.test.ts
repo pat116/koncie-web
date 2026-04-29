@@ -41,7 +41,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   process.env.CRON_SECRET = CRON_SECRET;
   process.env.NEXT_PUBLIC_SITE_URL = 'https://koncie.app';
-  (prisma as any).booking = {
+  (prisma as any).hotelBooking = {
     findMany: vi.fn().mockResolvedValue([]),
   };
   (prisma as any).messageLog = {
@@ -64,7 +64,7 @@ describe('cron/pre-arrival auth', () => {
     expect(res1.status).toBe(401);
     const res2 = await GET(makeRequest('Bearer nope'));
     expect(res2.status).toBe(401);
-    expect((prisma as any).booking.findMany).not.toHaveBeenCalled();
+    expect((prisma as any).hotelBooking.findMany).not.toHaveBeenCalled();
     expect(sendMessageMock).not.toHaveBeenCalled();
     expect(sendSmsMock).not.toHaveBeenCalled();
   });
@@ -72,7 +72,7 @@ describe('cron/pre-arrival auth', () => {
 
 describe('cron/pre-arrival T-7 upsell', () => {
   it('dispatches UPSELL_REMINDER_T7 for a booking in the window', async () => {
-    (prisma as any).booking.findMany
+    (prisma as any).hotelBooking.findMany
       .mockResolvedValueOnce([
         {
           id: 'b1',
@@ -98,7 +98,7 @@ describe('cron/pre-arrival T-7 upsell', () => {
   });
 
   it('skips when a MessageLog row already exists in the last 14 days', async () => {
-    (prisma as any).booking.findMany
+    (prisma as any).hotelBooking.findMany
       .mockResolvedValueOnce([
         {
           id: 'b1',
@@ -123,7 +123,7 @@ describe('cron/pre-arrival T-7 upsell', () => {
 
 describe('cron/pre-arrival T-3 insurance', () => {
   it('dispatches INSURANCE_REMINDER_T3 only when guest has no ACTIVE policy', async () => {
-    (prisma as any).booking.findMany
+    (prisma as any).hotelBooking.findMany
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([
         {
@@ -141,7 +141,7 @@ describe('cron/pre-arrival T-3 insurance', () => {
     const body = await res.json();
     expect(body.t3Dispatched).toBe(1);
 
-    const t3Call = (prisma as any).booking.findMany.mock.calls[1][0];
+    const t3Call = (prisma as any).hotelBooking.findMany.mock.calls[1][0];
     expect(t3Call.where.guest).toEqual({
       insurancePolicies: { none: { status: 'ACTIVE' } },
     });
@@ -153,7 +153,7 @@ describe('cron/pre-arrival T-3 insurance', () => {
 
 describe('cron/pre-arrival T-3 SMS', () => {
   it('dispatches PRE_ARRIVAL_SMS for a booking with a phone on file', async () => {
-    (prisma as any).booking.findMany
+    (prisma as any).hotelBooking.findMany
       .mockResolvedValueOnce([]) // T-7
       .mockResolvedValueOnce([]) // T-3 email
       .mockResolvedValueOnce([   // T-3 SMS
@@ -185,12 +185,12 @@ describe('cron/pre-arrival T-3 SMS', () => {
 
     // The T-3 query MUST filter on guest.phone not-null so we don't waste
     // sends on guests without a phone.
-    const smsCall = (prisma as any).booking.findMany.mock.calls[2][0];
+    const smsCall = (prisma as any).hotelBooking.findMany.mock.calls[2][0];
     expect(smsCall.where.guest).toEqual({ phone: { not: null } });
   });
 
   it('skips PRE_ARRIVAL_SMS when MessageLog dedupes', async () => {
-    (prisma as any).booking.findMany
+    (prisma as any).hotelBooking.findMany
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([
@@ -215,7 +215,7 @@ describe('cron/pre-arrival T-3 SMS', () => {
 
 describe('cron/pre-arrival T-0 welcome notification', () => {
   it('creates WELCOME_TO_RESORT notifications via the service', async () => {
-    (prisma as any).booking.findMany
+    (prisma as any).hotelBooking.findMany
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])

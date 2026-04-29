@@ -17,7 +17,7 @@ export default async function RegisterPage({ searchParams }: PageProps) {
     return <Missing />;
   }
 
-  const booking = await prisma.booking.findUnique({
+  const booking = await prisma.hotelBooking.findUnique({
     where: { id: searchParams.bookingId },
     include: { guest: true },
   });

@@ -25,7 +25,7 @@ export async function requireSignedInGuest() {
       ? { OR: [{ authUserId: user.id }, { email: user.email }] }
       : { email: user.email },
     include: {
-      bookings: {
+      hotelBookings: {
         include: { property: true },
         orderBy: { checkIn: 'asc' },
         take: 1,
@@ -34,9 +34,9 @@ export async function requireSignedInGuest() {
   });
 
   if (!guest) redirect('/welcome?error=no_guest_record');
-  if (guest.bookings.length === 0) redirect('/welcome?error=no_booking');
+  if (guest.hotelBookings.length === 0) redirect('/welcome?error=no_booking');
 
-  const booking = guest.bookings[0]!;
+  const booking = guest.hotelBookings[0]!;
 
   return { guest, booking };
 }

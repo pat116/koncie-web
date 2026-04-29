@@ -75,14 +75,14 @@ export async function listGuestsForProperty(
   propertyId: string,
 ): Promise<AdminGuestRow[]> {
   const guests = await prisma.guest.findMany({
-    where: { bookings: { some: { propertyId } } },
+    where: { hotelBookings: { some: { propertyId } } },
     include: {
-      bookings: {
+      hotelBookings: {
         where: { propertyId },
         orderBy: { checkIn: 'asc' },
       },
       transactions: {
-        where: { booking: { propertyId } },
+        where: { hotelBooking: { propertyId } },
         orderBy: { createdAt: 'desc' },
         take: 1,
       },
@@ -91,7 +91,7 @@ export async function listGuestsForProperty(
   });
 
   return guests.map((g) => {
-    const upcoming = g.bookings.find((b) => b.checkIn >= new Date());
+    const upcoming = g.hotelBookings.find((b) => b.checkIn >= new Date());
     const lastActivity =
       g.transactions[0]?.createdAt ?? g.updatedAt ?? null;
     return {
@@ -99,7 +99,7 @@ export async function listGuestsForProperty(
       email: g.email,
       firstName: g.firstName,
       lastName: g.lastName,
-      bookingCount: g.bookings.length,
+      bookingCount: g.hotelBookings.length,
       nextCheckIn: upcoming?.checkIn ?? null,
       lastActivity,
       claimed: g.claimedAt !== null,
@@ -116,7 +116,7 @@ export async function listGuestsForProperty(
 export async function listBookingsForProperty(
   propertyId: string,
 ): Promise<AdminBookingRow[]> {
-  const hotel = await prisma.booking.findMany({
+  const hotel = await prisma.hotelBooking.findMany({
     where: { propertyId },
     include: {
       guest: { select: { email: true } },
@@ -126,7 +126,7 @@ export async function listBookingsForProperty(
   });
 
   const flights = await prisma.flightBooking.findMany({
-    where: { guest: { bookings: { some: { propertyId } } } },
+    where: { guest: { hotelBookings: { some: { propertyId } } } },
     include: { guest: { select: { email: true } } },
     orderBy: { departureAt: 'desc' },
   });
@@ -176,7 +176,7 @@ export async function listPriorityAlerts(
 ): Promise<PriorityAlert[]> {
   const alerts: PriorityAlert[] = [];
 
-  const guestFilter = { bookings: { some: { propertyId } } };
+  const guestFilter = { hotelBookings: { some: { propertyId } } };
 
   // Failed payments — MCC 4722, ancillary only.
   const failedTx = await prisma.transaction.findMany({
@@ -247,12 +247,12 @@ export async function listPriorityAlerts(
   const unclaimedGuests = await prisma.guest.findMany({
     where: {
       claimedAt: null,
-      bookings: {
+      hotelBookings: {
         some: { propertyId, checkIn: { gt: now, lt: soon } },
       },
     },
     include: {
-      bookings: {
+      hotelBookings: {
         where: { propertyId },
         orderBy: { checkIn: 'asc' },
         take: 1,
@@ -261,7 +261,7 @@ export async function listPriorityAlerts(
     take: 25,
   });
   for (const g of unclaimedGuests) {
-    const nextBooking = g.bookings[0];
+    const nextBooking = g.hotelBookings[0];
     if (!nextBooking) continue;
     alerts.push({
       id: `unclaimed:${g.id}`,
@@ -296,7 +296,7 @@ export async function listPriorityAlerts(
 export async function computeRevenueKpis(
   propertyId: string,
 ): Promise<RevenueKpis> {
-  const guestFilter = { bookings: { some: { propertyId } } };
+  const guestFilter = { hotelBookings: { some: { propertyId } } };
 
   const [
     capturedTx,
@@ -309,7 +309,7 @@ export async function computeRevenueKpis(
     prisma.transaction.aggregate({
       _sum: { koncieFeeMinor: true, amountMinor: true },
       _count: { _all: true },
-      where: { status: 'captured', booking: { propertyId } },
+      where: { status: 'captured', hotelBooking: { propertyId } },
     }),
     prisma.insurancePolicy.aggregate({
       _sum: { koncieFeeMinor: true, amountMinor: true },
@@ -317,7 +317,7 @@ export async function computeRevenueKpis(
       where: { status: 'ACTIVE', guest: guestFilter },
     }),
     prisma.guest.count({ where: guestFilter }),
-    prisma.booking.count({ where: { propertyId, status: 'CONFIRMED' } }),
+    prisma.hotelBooking.count({ where: { propertyId, status: 'CONFIRMED' } }),
     prisma.flightBooking.count({ where: { guest: guestFilter } }),
     prisma.insurancePolicy.count({
       where: { status: 'ACTIVE', guest: guestFilter },
@@ -378,7 +378,7 @@ export async function listMessagesForProperty(
 ): Promise<AdminMessageRow[]> {
   const rows = await prisma.messageLog.findMany({
     where: {
-      guest: { bookings: { some: { propertyId } } },
+      guest: { hotelBookings: { some: { propertyId } } },
     },
     include: {
       guest: { select: { email: true, firstName: true, lastName: true } },
@@ -408,11 +408,11 @@ export async function listMessagesForProperty(
  */
 export async function listUpsellTransactionsForCsv(propertyId: string) {
   const rows = await prisma.transaction.findMany({
-    where: { booking: { propertyId } },
+    where: { hotelBooking: { propertyId } },
     include: {
       guest: { select: { email: true, firstName: true, lastName: true } },
       upsell: { select: { name: true, category: true } },
-      booking: { select: { externalRef: true } },
+      hotelBooking: { select: { externalRef: true } },
     },
     orderBy: { createdAt: 'desc' },
   });

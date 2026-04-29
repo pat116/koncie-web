@@ -28,17 +28,17 @@ export async function GET(request: NextRequest) {
   const guest = await prisma.guest.findUnique({
     where: { email: seedEmail },
     include: {
-      bookings: { orderBy: { checkIn: 'asc' }, take: 1 },
+      hotelBookings: { orderBy: { checkIn: 'asc' }, take: 1 },
     },
   });
-  if (!guest || guest.bookings.length === 0) {
+  if (!guest || guest.hotelBookings.length === 0) {
     return new NextResponse(
       `No booking for seed guest ${seedEmail} — run pnpm db:seed first`,
       { status: 404 },
     );
   }
 
-  const booking = guest.bookings[0]!;
+  const booking = guest.hotelBookings[0]!;
   const conv = await getOrCreateConversation(booking.id);
   const token = await mintChatToken({
     bookingId: booking.id,

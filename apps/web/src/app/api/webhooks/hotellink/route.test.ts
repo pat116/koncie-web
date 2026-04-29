@@ -75,7 +75,7 @@ describe('POST /api/webhooks/hotellink', () => {
 
   it('returns 200 with bookingId + messageLogId when signature and ingest succeed', async () => {
     (ingestHotelLinkBooking as any).mockResolvedValue({
-      booking: { id: 'booking-1' },
+      hotelBooking: { id: 'booking-1' },
       guest: { id: 'guest-1' },
       messageLogId: 'msg-1',
       skipped: null,

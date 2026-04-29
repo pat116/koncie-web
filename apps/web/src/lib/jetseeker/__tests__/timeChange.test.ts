@@ -24,8 +24,11 @@ const SECRET = 'unit-test-jetseeker-secret-must-be-32-chars-or-more';
 beforeEach(() => {
   vi.clearAllMocks();
   (prisma as any).guest = { findUnique: vi.fn() };
-  (prisma as any).flightBooking = { findFirst: vi.fn() };
-  (prisma as any).booking = { findFirst: vi.fn() };
+  (prisma as any).flightBooking = {
+    findFirst: vi.fn(),
+    update: vi.fn().mockResolvedValue({}),
+  };
+  (prisma as any).hotelBooking = { findFirst: vi.fn() };
   createNotificationMock.mockResolvedValue(true);
 });
 
@@ -106,7 +109,7 @@ describe('applyJetSeekerTimeChange', () => {
       externalRef: 'NAMOTU-FJ-001',
       carrier: 'FJ',
     });
-    (prisma as any).booking.findFirst.mockResolvedValue(null);
+    (prisma as any).hotelBooking.findFirst.mockResolvedValue(null);
     const r = await applyJetSeekerTimeChange(payload);
     expect(r.kind).toBe('queued');
   });
@@ -119,7 +122,7 @@ describe('applyJetSeekerTimeChange', () => {
       externalRef: 'NAMOTU-FJ-001',
       carrier: 'FJ',
     });
-    (prisma as any).booking.findFirst.mockResolvedValue({
+    (prisma as any).hotelBooking.findFirst.mockResolvedValue({
       id: 'b1',
       guestId: 'g1',
       status: 'CONFIRMED',
@@ -130,9 +133,7 @@ describe('applyJetSeekerTimeChange', () => {
 
     expect(createNotificationMock).toHaveBeenCalledTimes(1);
     const arg = createNotificationMock.mock.calls[0]![0];
-    expect(arg.providerEventKey).toBe(
-      `${payload.flight_booking.jetseeker_order_id}:${payload.occurred_at}`,
-    );
+    expect(arg.providerEventKey).toBe(String(payload.flight_booking.jetseeker_order_id));
     expect(arg.oldDepartureLocal).toBe(payload.flight_booking.old_departure_local);
     expect(arg.newDepartureLocal).toBe(payload.flight_booking.new_departure_local);
   });
@@ -145,7 +146,7 @@ describe('applyJetSeekerTimeChange', () => {
       externalRef: 'NAMOTU-FJ-001',
       carrier: 'FJ',
     });
-    (prisma as any).booking.findFirst.mockResolvedValue({
+    (prisma as any).hotelBooking.findFirst.mockResolvedValue({
       id: 'b1',
       guestId: 'g1',
       status: 'CONFIRMED',
@@ -154,5 +155,103 @@ describe('applyJetSeekerTimeChange', () => {
 
     const r = await applyJetSeekerTimeChange(payload);
     expect(r).toMatchObject({ kind: 'notified', notificationCreated: false });
+  });
+
+  it('S7-14: persists raw_payload + outbound* columns on the FlightBooking', async () => {
+    (prisma as any).guest.findUnique.mockResolvedValue({ id: 'g1' });
+    (prisma as any).flightBooking.findFirst.mockResolvedValue({
+      id: 'f1',
+      guestId: 'g1',
+      externalRef: 'NAMOTU-FJ-001',
+      carrier: 'FJ',
+      departureAt: new Date('2026-08-04T08:00:00Z'),
+      outboundOriginalDepartureAt: null,
+    });
+    (prisma as any).hotelBooking.findFirst.mockResolvedValue({
+      id: 'b1',
+      guestId: 'g1',
+      status: 'CONFIRMED',
+    });
+
+    await applyJetSeekerTimeChange(payload);
+
+    expect((prisma as any).flightBooking.update).toHaveBeenCalledTimes(1);
+    const arg = (prisma as any).flightBooking.update.mock.calls[0][0];
+    expect(arg.where).toEqual({ id: 'f1' });
+    expect(arg.data.outboundStatus).toBe('TIME_CHANGED');
+    expect(arg.data.outboundOriginalDepartureAt).toEqual(
+      new Date('2026-08-04T08:00:00Z'),
+    );
+    expect(arg.data.rawPayload).toBeTruthy();
+  });
+
+  it('S7-14: reversal does NOT re-stamp outboundOriginalDepartureAt', async () => {
+    (prisma as any).guest.findUnique.mockResolvedValue({ id: 'g1' });
+    (prisma as any).flightBooking.findFirst.mockResolvedValue({
+      id: 'f1',
+      guestId: 'g1',
+      externalRef: 'NAMOTU-FJ-001',
+      carrier: 'FJ',
+      departureAt: new Date('2026-08-04T11:30:00Z'),
+      // already stamped from the first change
+      outboundOriginalDepartureAt: new Date('2026-08-04T08:00:00Z'),
+    });
+    (prisma as any).hotelBooking.findFirst.mockResolvedValue({
+      id: 'b1',
+      guestId: 'g1',
+      status: 'CONFIRMED',
+    });
+
+    await applyJetSeekerTimeChange(payload);
+
+    const arg = (prisma as any).flightBooking.update.mock.calls[0][0];
+    expect(arg.data.outboundOriginalDepartureAt).toBeUndefined();
+  });
+
+  it('S7-14: providerEventKey is order-id-only (dedupes across replays AND reversals)', async () => {
+    (prisma as any).guest.findUnique.mockResolvedValue({ id: 'g1' });
+    (prisma as any).flightBooking.findFirst.mockResolvedValue({
+      id: 'f1',
+      guestId: 'g1',
+      externalRef: 'NAMOTU-FJ-001',
+      carrier: 'FJ',
+      departureAt: new Date('2026-08-04T08:00:00Z'),
+    });
+    (prisma as any).hotelBooking.findFirst.mockResolvedValue({
+      id: 'b1',
+      guestId: 'g1',
+      status: 'CONFIRMED',
+    });
+
+    await applyJetSeekerTimeChange(payload);
+
+    const noteArg = createNotificationMock.mock.calls[0]![0];
+    // Should NOT include the occurred_at portion any more.
+    expect(noteArg.providerEventKey).not.toContain(':');
+    expect(noteArg.providerEventKey).toBe(
+      String(payload.flight_booking.jetseeker_order_id),
+    );
+  });
+
+  it('S7-14: PNR match on FlightBooking.pnr column also resolves the flight', async () => {
+    (prisma as any).guest.findUnique.mockResolvedValue({ id: 'g1' });
+    (prisma as any).flightBooking.findFirst.mockResolvedValue({
+      id: 'f1',
+      guestId: 'g1',
+      pnr: payload.flight_booking.pnr,
+      carrier: 'FJ',
+      departureAt: new Date('2026-08-04T08:00:00Z'),
+    });
+    (prisma as any).hotelBooking.findFirst.mockResolvedValue({
+      id: 'b1',
+      guestId: 'g1',
+      status: 'CONFIRMED',
+    });
+
+    const r = await applyJetSeekerTimeChange(payload);
+    expect(r.kind).toBe('notified');
+    // Confirms the OR clause includes pnr-column lookup (S7-04 column).
+    const findFirstArg = (prisma as any).flightBooking.findFirst.mock.calls[0][0];
+    expect(findFirstArg.where.OR).toContainEqual({ pnr: payload.flight_booking.pnr });
   });
 });

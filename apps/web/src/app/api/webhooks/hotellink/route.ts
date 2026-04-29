@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     const result = await ingestHotelLinkBooking(payload);
     return NextResponse.json({
       ok: true,
-      bookingId: result.booking.id,
+      bookingId: result.hotelBooking.id,
       messageLogId: result.messageLogId,
       skipped: result.skipped,
     });
