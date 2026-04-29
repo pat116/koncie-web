@@ -34,9 +34,9 @@ export async function PATCH(
 
   const notification = await prisma.notification.findUnique({
     where: { id },
-    include: { booking: { select: { guestId: true } } },
+    include: { hotelBooking: { select: { guestId: true } } },
   });
-  if (!notification || notification.booking.guestId !== guest.id) {
+  if (!notification || notification.hotelBooking.guestId !== guest.id) {
     return NextResponse.json({ ok: false, error: 'not_found' }, { status: 404 });
   }
 

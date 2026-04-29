@@ -37,7 +37,7 @@ function wireDefaultPrisma() {
     findUnique: vi.fn().mockResolvedValue(PROPERTY),
   };
   (prisma as any).guest = { upsert: vi.fn().mockResolvedValue(GUEST) };
-  (prisma as any).booking = { upsert: vi.fn().mockResolvedValue(BOOKING) };
+  (prisma as any).hotelBooking = { upsert: vi.fn().mockResolvedValue(BOOKING) };
   (prisma as any).messageLog = {
     findFirst: vi.fn().mockResolvedValue(null),
   };
@@ -56,7 +56,7 @@ describe('ingestHotelLinkBooking — happy path', () => {
     wireDefaultPrisma();
   });
 
-  it('upserts Guest + Booking and dispatches the confirmation email', async () => {
+  it('upserts Guest + HotelBooking and dispatches the confirmation email', async () => {
     const payload = mockHotelLinkWebhookPayload();
     const result = await ingestHotelLinkBooking(payload);
 
@@ -65,8 +65,8 @@ describe('ingestHotelLinkBooking — happy path', () => {
       email: 'pat@kovena.com',
     });
 
-    expect((prisma as any).booking.upsert).toHaveBeenCalledTimes(1);
-    const bookingUpsertArg = (prisma as any).booking.upsert.mock.calls[0][0];
+    expect((prisma as any).hotelBooking.upsert).toHaveBeenCalledTimes(1);
+    const bookingUpsertArg = (prisma as any).hotelBooking.upsert.mock.calls[0][0];
     expect(bookingUpsertArg.where).toEqual({ externalRef: 'HL-NAMOTU-0001' });
     expect(bookingUpsertArg.create.guestId).toBe(GUEST.id);
     expect(bookingUpsertArg.create.propertyId).toBe(PROPERTY.id);
@@ -172,7 +172,7 @@ describe('ingestHotelLinkBooking — error + non-confirmed paths', () => {
   });
 
   it('does not send the confirmation email for CANCELLED bookings', async () => {
-    (prisma as any).booking.upsert.mockResolvedValue({ ...BOOKING, status: 'CANCELLED' });
+    (prisma as any).hotelBooking.upsert.mockResolvedValue({ ...BOOKING, status: 'CANCELLED' });
 
     const result = await ingestHotelLinkBooking(
       mockHotelLinkWebhookPayload({ status: 'CANCELLED' }),

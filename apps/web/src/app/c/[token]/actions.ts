@@ -57,7 +57,7 @@ export async function sendChatMessage(input: {
     return { ok: false, reason: 'unauthorized' };
   }
 
-  const booking = await prisma.booking.findUnique({
+  const booking = await prisma.hotelBooking.findUnique({
     where: { id: payload.bookingId },
     include: { guest: true, property: true },
   });
@@ -97,7 +97,7 @@ export async function triggerRegisterMagicLink(input: {
   const session = await readChatSessionCookie();
   if (!session) return { ok: false, reason: 'unauthorized' };
 
-  const booking = await prisma.booking.findUnique({
+  const booking = await prisma.hotelBooking.findUnique({
     where: { id: session.bookingId },
     include: { guest: true, property: true },
   });

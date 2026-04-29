@@ -9,7 +9,7 @@
  *     webhook can return 400).
  *  2. Resolve the target Property by slug → throw PropertyNotFoundError
  *     if unknown (webhook turns into 404; HotelLink then stops retrying).
- *  3. Upsert Guest + Booking atomically inside a single transaction,
+ *  3. Upsert Guest + HotelBooking atomically inside a single transaction,
  *     keyed on email and externalRef respectively. Second ingest with
  *     the same bookingRef updates in place (idempotent at the DB layer).
  *  4. For CONFIRMED only: fire the "account ready" magic-link email,
@@ -19,7 +19,7 @@
  *  5. Return the upserted entities plus the messageLogId (or null if we
  *     skipped the send) so the webhook can echo it back in the 200.
  */
-import type { Booking, Guest, Prisma } from '@prisma/client';
+import type { HotelBooking, Guest, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/prisma';
 import { signMagicLink } from '@/lib/auth/signed-link';
 import { sendMessage } from '@/lib/messaging/send';
@@ -38,7 +38,7 @@ export class PropertyNotFoundError extends Error {
 
 export type IngestResult = {
   guest: Guest;
-  booking: Booking;
+  hotelBooking: HotelBooking;
   messageLogId: string | null;
   skipped: null | 'non_confirmed_status' | 'already_sent';
 };
@@ -69,7 +69,7 @@ export async function ingestHotelLinkBooking(
   const checkInDate = new Date(payload.checkIn);
   const checkOutDate = new Date(payload.checkOut);
 
-  const { guest, booking } = await prisma.$transaction(async (tx) => {
+  const { guest, hotelBooking } = await prisma.$transaction(async (tx) => {
     const g = await tx.guest.upsert({
       where: { email: payload.guest.email },
       create: {
@@ -89,9 +89,9 @@ export async function ingestHotelLinkBooking(
       checkOut: checkOutDate,
       numGuests: payload.numGuests,
       status: payload.status,
-    } satisfies Omit<Prisma.BookingUncheckedCreateInput, 'externalRef' | 'guestId'>;
+    } satisfies Omit<Prisma.HotelBookingUncheckedCreateInput, 'externalRef' | 'guestId'>;
 
-    const b = await tx.booking.upsert({
+    const b = await tx.hotelBooking.upsert({
       where: { externalRef: payload.bookingRef },
       create: {
         externalRef: payload.bookingRef,
@@ -104,21 +104,21 @@ export async function ingestHotelLinkBooking(
       },
     });
 
-    return { guest: g, booking: b };
+    return { guest: g, hotelBooking: b };
   });
 
   if (payload.status !== 'CONFIRMED') {
-    return { guest, booking, messageLogId: null, skipped: 'non_confirmed_status' };
+    return { guest, hotelBooking, messageLogId: null, skipped: 'non_confirmed_status' };
   }
 
   // BOOKING_CONFIRMED notification (Sprint-6 completion §3.S6-09).
   // Fires once per booking — service-level idempotency. Independent of the
   // email-send dedupe below.
   await createBookingConfirmedNotification({
-    bookingId: booking.id,
+    bookingId: hotelBooking.id,
     propertyName: property.name,
-    checkIn: booking.checkIn,
-    checkOut: booking.checkOut,
+    checkIn: hotelBooking.checkIn,
+    checkOut: hotelBooking.checkOut,
   }).catch(() => {
     // Notification creation failure is logged at the service layer; never
     // block the email flow on it.
@@ -128,18 +128,18 @@ export async function ingestHotelLinkBooking(
   const existing = await prisma.messageLog.findFirst({
     where: {
       guestId: guest.id,
-      bookingId: booking.id,
+      bookingId: hotelBooking.id,
       kind: 'HOTEL_BOOKING_CONFIRMED',
       createdAt: { gte: new Date(now.getTime() - MESSAGE_LOG_DEDUPE_WINDOW_MS) },
     },
     select: { id: true },
   });
   if (existing) {
-    return { guest, booking, messageLogId: existing.id, skipped: 'already_sent' };
+    return { guest, hotelBooking, messageLogId: existing.id, skipped: 'already_sent' };
   }
 
   const token = await signMagicLink({
-    bookingId: booking.id,
+    bookingId: hotelBooking.id,
     guestEmail: guest.email,
     expiresInSeconds: MAGIC_LINK_TTL_SECONDS,
   });
@@ -151,7 +151,7 @@ export async function ingestHotelLinkBooking(
     templateId: 'hotel-booking-confirmed-v1',
     to: guest.email,
     guestId: guest.id,
-    bookingId: booking.id,
+    bookingId: hotelBooking.id,
     vars: {
       firstName: guest.firstName,
       propertyName: property.name,
@@ -163,7 +163,7 @@ export async function ingestHotelLinkBooking(
 
   return {
     guest,
-    booking,
+    hotelBooking,
     messageLogId: result.messageLog.id,
     skipped: null,
   };

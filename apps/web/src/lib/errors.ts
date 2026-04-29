@@ -18,7 +18,7 @@ export class SignedLinkError extends Error {
 
 export class BookingNotFoundError extends Error {
   constructor(public readonly externalRef: string) {
-    super(`Booking not found: ${externalRef}`);
+    super(`HotelBooking not found: ${externalRef}`);
     this.name = 'BookingNotFoundError';
   }
 }

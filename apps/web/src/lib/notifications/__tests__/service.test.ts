@@ -55,7 +55,7 @@ describe('createBookingConfirmedNotification', () => {
 describe('createFlightTimeChangedNotification', () => {
   it('writes exactly one row keyed on providerEventKey', async () => {
     const created = await createFlightTimeChangedNotification({
-      booking: { id: 'b1' } as any,
+      hotelBooking: { id: 'b1' } as any,
       flight: {
         id: 'f1',
         guestId: 'g1',
@@ -79,7 +79,7 @@ describe('createFlightTimeChangedNotification', () => {
   it('dedupes via metadata.providerEventKey', async () => {
     (prisma as any).notification.findFirst.mockResolvedValue({ id: 'existing' });
     const created = await createFlightTimeChangedNotification({
-      booking: { id: 'b1' } as any,
+      hotelBooking: { id: 'b1' } as any,
       flight: { id: 'f1', externalRef: 'X', carrier: 'FJ' } as any,
       oldDepartureLocal: '2026-07-15T08:00:00',
       newDepartureLocal: '2026-07-15T11:30:00',
@@ -92,7 +92,7 @@ describe('createFlightTimeChangedNotification', () => {
 describe('createWelcomeToResortNotification', () => {
   it('creates a row gated on existing-row-of-kind', async () => {
     const created = await createWelcomeToResortNotification({
-      booking: {
+      hotelBooking: {
         id: 'b1',
         guest: { firstName: 'Pat' },
         property: { name: 'Namotu' },

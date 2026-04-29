@@ -10,7 +10,7 @@ import { signMagicLink } from '@/lib/auth/signed-link';
  * stakeholders can see the post-booking flow without a real booking email.
  */
 export async function startDemo() {
-  const booking = await prisma.booking.findUnique({
+  const booking = await prisma.hotelBooking.findUnique({
     where: { externalRef: 'HL-84321-NMT' },
     include: { guest: true },
   });

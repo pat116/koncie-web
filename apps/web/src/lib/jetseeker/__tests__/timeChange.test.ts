@@ -25,7 +25,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   (prisma as any).guest = { findUnique: vi.fn() };
   (prisma as any).flightBooking = { findFirst: vi.fn() };
-  (prisma as any).booking = { findFirst: vi.fn() };
+  (prisma as any).hotelBooking = { findFirst: vi.fn() };
   createNotificationMock.mockResolvedValue(true);
 });
 
@@ -106,7 +106,7 @@ describe('applyJetSeekerTimeChange', () => {
       externalRef: 'NAMOTU-FJ-001',
       carrier: 'FJ',
     });
-    (prisma as any).booking.findFirst.mockResolvedValue(null);
+    (prisma as any).hotelBooking.findFirst.mockResolvedValue(null);
     const r = await applyJetSeekerTimeChange(payload);
     expect(r.kind).toBe('queued');
   });
@@ -119,7 +119,7 @@ describe('applyJetSeekerTimeChange', () => {
       externalRef: 'NAMOTU-FJ-001',
       carrier: 'FJ',
     });
-    (prisma as any).booking.findFirst.mockResolvedValue({
+    (prisma as any).hotelBooking.findFirst.mockResolvedValue({
       id: 'b1',
       guestId: 'g1',
       status: 'CONFIRMED',
@@ -145,7 +145,7 @@ describe('applyJetSeekerTimeChange', () => {
       externalRef: 'NAMOTU-FJ-001',
       carrier: 'FJ',
     });
-    (prisma as any).booking.findFirst.mockResolvedValue({
+    (prisma as any).hotelBooking.findFirst.mockResolvedValue({
       id: 'b1',
       guestId: 'g1',
       status: 'CONFIRMED',

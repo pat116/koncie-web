@@ -46,7 +46,7 @@ export default async function TripPage() {
             <dd className="font-semibold text-koncie-charcoal">{b.numGuests}</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-koncie-charcoal/60">Booking ref</dt>
+            <dt className="text-koncie-charcoal/60">HotelBooking ref</dt>
             <dd className="font-mono text-koncie-charcoal">{b.externalRef}</dd>
           </div>
         </dl>

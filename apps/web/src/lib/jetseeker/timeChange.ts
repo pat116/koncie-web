@@ -87,17 +87,17 @@ export async function applyJetSeekerTimeChange(
   });
   if (!flight) return { kind: 'queued', reason: 'unknown_pnr_or_email' };
 
-  // Resolve a Booking for the same guest. The notification model is
+  // Resolve a HotelBooking for the same guest. The notification model is
   // booking-scoped; pick the next upcoming hotel booking. For pilot
   // demos this is the only HotelBooking the guest has.
-  const booking = await prisma.booking.findFirst({
+  const booking = await prisma.hotelBooking.findFirst({
     where: { guestId: guest.id, status: 'CONFIRMED' },
     orderBy: { checkIn: 'asc' },
   });
   if (!booking) return { kind: 'queued', reason: 'unknown_pnr_or_email' };
 
   const created = await createFlightTimeChangedNotification({
-    booking,
+    hotelBooking: booking,
     flight,
     oldDepartureLocal: fb.old_departure_local,
     newDepartureLocal: fb.new_departure_local,

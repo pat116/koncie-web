@@ -86,7 +86,7 @@ async function main() {
     },
   });
 
-  const booking = await prisma.booking.create({
+  const booking = await prisma.hotelBooking.create({
     data: {
       externalRef: 'HL-84321-NMT',
       guestId: guest.id,

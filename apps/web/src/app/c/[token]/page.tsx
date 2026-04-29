@@ -76,7 +76,7 @@ export default async function ChatTokenPage({
   // territory. Tests assert this (completion brief §8 risk-mitigation).
   const { bookingId, conversationId } = payload;
 
-  const booking = await prisma.booking.findUnique({
+  const booking = await prisma.hotelBooking.findUnique({
     where: { id: bookingId },
     include: { guest: true, property: true },
   });

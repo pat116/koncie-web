@@ -2,14 +2,14 @@
  * Notifications service (Sprint-6 completion §3.S6-09).
  *
  * Three NotificationKinds, all polled (60s open / 5min idle, driven from
- * the client). The bell-dropdown surface is in S6-10. Booking-confirmed and
+ * the client). The bell-dropdown surface is in S6-10. HotelBooking-confirmed and
  * welcome-to-resort notifications fire from local event handlers /
  * cron; flight-time-changed notifications fire from S6-08's JetSeeker
  * webhook receiver.
  */
 
 import { prisma } from '@/lib/db/prisma';
-import type { Booking, FlightBooking, Guest, Property } from '@prisma/client';
+import type { HotelBooking, FlightBooking, Guest, Property } from '@prisma/client';
 
 export type NotificationInlineCta = {
   label: string;
@@ -35,7 +35,7 @@ function fmtTime(d: Date): string {
 /**
  * Fired by the booking-confirmed event handler (HotelLink ingest path).
  * Idempotent — dedupes on the existence of any prior BOOKING_CONFIRMED
- * notification for the booking. Returns true if a row was created.
+ * notification for the hotelBooking. Returns true if a row was created.
  */
 export async function createBookingConfirmedNotification(input: {
   bookingId: string;
@@ -54,7 +54,7 @@ export async function createBookingConfirmedNotification(input: {
       bookingId: input.bookingId,
       kind: 'BOOKING_CONFIRMED',
       title: 'Your trip is confirmed',
-      body: `Booking confirmed for ${input.propertyName}, ${fmtDate(input.checkIn)} → ${fmtDate(input.checkOut)}.`,
+      body: `HotelBooking confirmed for ${input.propertyName}, ${fmtDate(input.checkIn)} → ${fmtDate(input.checkOut)}.`,
       inlineCta: { label: 'View itinerary', href: '/hub' } as object,
     },
   });
@@ -68,7 +68,7 @@ export async function createBookingConfirmedNotification(input: {
  * created.
  */
 export async function createFlightTimeChangedNotification(input: {
-  booking: Booking;
+  hotelBooking: HotelBooking;
   flight: FlightBooking;
   oldDepartureLocal: string;
   newDepartureLocal: string;
@@ -77,7 +77,7 @@ export async function createFlightTimeChangedNotification(input: {
 }): Promise<boolean> {
   const existing = await prisma.notification.findFirst({
     where: {
-      bookingId: input.booking.id,
+      bookingId: input.hotelBooking.id,
       kind: 'FLIGHT_TIME_CHANGED',
       metadata: { path: ['providerEventKey'], equals: input.providerEventKey },
     },
@@ -95,7 +95,7 @@ export async function createFlightTimeChangedNotification(input: {
 
   await prisma.notification.create({
     data: {
-      bookingId: input.booking.id,
+      bookingId: input.hotelBooking.id,
       kind: 'FLIGHT_TIME_CHANGED',
       title: 'Flight time changed',
       body,
@@ -111,24 +111,24 @@ export async function createFlightTimeChangedNotification(input: {
 
 /**
  * Fired from the pre-arrival cron at T-0. Idempotent — dedupes on existing
- * row of kind for the booking.
+ * row of kind for the hotelBooking.
  */
 export async function createWelcomeToResortNotification(input: {
-  booking: Booking & { guest: Guest; property: Property };
+  hotelBooking: HotelBooking & { guest: Guest; property: Property };
 }): Promise<boolean> {
-  const { booking } = input;
+  const { hotelBooking } = input;
   const existing = await prisma.notification.findFirst({
-    where: { bookingId: booking.id, kind: 'WELCOME_TO_RESORT' },
+    where: { bookingId: hotelBooking.id, kind: 'WELCOME_TO_RESORT' },
     select: { id: true },
   });
   if (existing) return false;
 
   await prisma.notification.create({
     data: {
-      bookingId: booking.id,
+      bookingId: hotelBooking.id,
       kind: 'WELCOME_TO_RESORT',
-      title: `Welcome to ${booking.property.name}`,
-      body: `${booking.guest.firstName}, the team can't wait to see you. Your concierge is ready when you are.`,
+      title: `Welcome to ${hotelBooking.property.name}`,
+      body: `${hotelBooking.guest.firstName}, the team can't wait to see you. Your concierge is ready when you are.`,
     },
   });
   return true;

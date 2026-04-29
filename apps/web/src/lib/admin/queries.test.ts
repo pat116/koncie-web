@@ -23,7 +23,7 @@ beforeEach(() => {
     findMany: vi.fn().mockResolvedValue([]),
     count: vi.fn().mockResolvedValue(0),
   };
-  (prisma as any).booking = {
+  (prisma as any).hotelBooking = {
     findMany: vi.fn().mockResolvedValue([]),
     count: vi.fn().mockResolvedValue(0),
   };
@@ -54,7 +54,7 @@ describe('listGuestsForProperty', () => {
     await listGuestsForProperty(PROPERTY_ID);
     const call = (prisma as any).guest.findMany.mock.calls[0][0];
     expect(call.where).toEqual({
-      bookings: { some: { propertyId: PROPERTY_ID } },
+      hotelBookings: { some: { propertyId: PROPERTY_ID } },
     });
   });
 
@@ -68,7 +68,7 @@ describe('listGuestsForProperty', () => {
         lastName: 'Demo',
         claimedAt: new Date(),
         updatedAt: new Date(),
-        bookings: [
+        hotelBookings: [
           { checkIn: future, propertyId: PROPERTY_ID },
           { checkIn: future, propertyId: PROPERTY_ID },
         ],
@@ -86,16 +86,16 @@ describe('listGuestsForProperty', () => {
 describe('listBookingsForProperty', () => {
   it('tenant-scopes hotel bookings by propertyId and flights by guest-at-property', async () => {
     await listBookingsForProperty(PROPERTY_ID);
-    const hotelCall = (prisma as any).booking.findMany.mock.calls[0][0];
+    const hotelCall = (prisma as any).hotelBooking.findMany.mock.calls[0][0];
     expect(hotelCall.where).toEqual({ propertyId: PROPERTY_ID });
     const flightCall = (prisma as any).flightBooking.findMany.mock.calls[0][0];
     expect(flightCall.where).toEqual({
-      guest: { bookings: { some: { propertyId: PROPERTY_ID } } },
+      guest: { hotelBookings: { some: { propertyId: PROPERTY_ID } } },
     });
   });
 
   it('merges hotel + flight rows and sorts by most-recent activity', async () => {
-    (prisma as any).booking.findMany.mockResolvedValue([
+    (prisma as any).hotelBooking.findMany.mockResolvedValue([
       {
         id: 'b1',
         externalRef: 'HL-1',
@@ -132,7 +132,7 @@ describe('listPriorityAlerts', () => {
   it('tenant-scopes all four alert sources via the guest/bookings/propertyId relation', async () => {
     await listPriorityAlerts(PROPERTY_ID, now);
 
-    const guestFilter = { bookings: { some: { propertyId: PROPERTY_ID } } };
+    const guestFilter = { hotelBookings: { some: { propertyId: PROPERTY_ID } } };
 
     const txCall = (prisma as any).transaction.findMany.mock.calls[0][0];
     expect(txCall.where).toMatchObject({ guest: guestFilter });
@@ -146,7 +146,7 @@ describe('listPriorityAlerts', () => {
     const unclaimedCall = (prisma as any).guest.findMany.mock.calls[0][0];
     expect(unclaimedCall.where).toMatchObject({
       claimedAt: null,
-      bookings: { some: expect.objectContaining({ propertyId: PROPERTY_ID }) },
+      hotelBookings: { some: expect.objectContaining({ propertyId: PROPERTY_ID }) },
     });
   });
 
@@ -208,7 +208,7 @@ describe('computeRevenueKpis', () => {
       _count: { _all: 2 },
     });
     (prisma as any).guest.count.mockResolvedValue(20);
-    (prisma as any).booking.count.mockResolvedValue(10);
+    (prisma as any).hotelBooking.count.mockResolvedValue(10);
     (prisma as any).flightBooking.count.mockResolvedValue(4);
     (prisma as any).insurancePolicy.count.mockResolvedValue(2);
 
@@ -235,7 +235,7 @@ describe('computeRevenueKpis', () => {
       _count: { _all: 0 },
     });
     (prisma as any).guest.count.mockResolvedValue(0);
-    (prisma as any).booking.count.mockResolvedValue(0);
+    (prisma as any).hotelBooking.count.mockResolvedValue(0);
     (prisma as any).flightBooking.count.mockResolvedValue(0);
     (prisma as any).insurancePolicy.count.mockResolvedValue(0);
 
@@ -251,12 +251,12 @@ describe('computeRevenueKpis', () => {
     const txCall = (prisma as any).transaction.aggregate.mock.calls[0][0];
     expect(txCall.where).toEqual({
       status: 'captured',
-      booking: { propertyId: PROPERTY_ID },
+      hotelBooking: { propertyId: PROPERTY_ID },
     });
     const polCall = (prisma as any).insurancePolicy.aggregate.mock.calls[0][0];
     expect(polCall.where).toEqual({
       status: 'ACTIVE',
-      guest: { bookings: { some: { propertyId: PROPERTY_ID } } },
+      guest: { hotelBookings: { some: { propertyId: PROPERTY_ID } } },
     });
   });
 });
@@ -265,7 +265,7 @@ describe('listUpsellTransactionsForCsv', () => {
   it('tenant-scopes via booking.propertyId', async () => {
     await listUpsellTransactionsForCsv(PROPERTY_ID);
     const call = (prisma as any).transaction.findMany.mock.calls[0][0];
-    expect(call.where).toEqual({ booking: { propertyId: PROPERTY_ID } });
+    expect(call.where).toEqual({ hotelBooking: { propertyId: PROPERTY_ID } });
   });
 });
 
@@ -274,7 +274,7 @@ describe('listMessagesForProperty', () => {
     await listMessagesForProperty(PROPERTY_ID, 25);
     const call = (prisma as any).messageLog.findMany.mock.calls[0][0];
     expect(call.where).toEqual({
-      guest: { bookings: { some: { propertyId: PROPERTY_ID } } },
+      guest: { hotelBookings: { some: { propertyId: PROPERTY_ID } } },
     });
     expect(call.orderBy).toEqual({ createdAt: 'desc' });
     expect(call.take).toBe(25);

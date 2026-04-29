@@ -82,7 +82,7 @@ model Property {
   timezone             String
   partnerIntegrationId String             @map("partner_integration_id") @db.Uuid
   partnerIntegration   PartnerIntegration @relation(fields: [partnerIntegrationId], references: [id])
-  bookings             Booking[]
+  hotelBookings             HotelBooking[]
   upsells              Upsell[]
   adminUsers           AdminUser[]
   createdAt            DateTime           @default(now()) @map("created_at")
@@ -102,7 +102,7 @@ model Guest {
   phone                 String?
   authUserId            String?           @unique @map("auth_user_id") @db.Uuid
   claimedAt             DateTime?         @map("claimed_at")
-  bookings              Booking[]
+  hotelBookings              HotelBooking[]
   transactions          Transaction[]
   savedCards            SavedCard[]
   flightBookings        FlightBooking[]
@@ -117,7 +117,7 @@ model Guest {
   @@map("guests")
 }
 
-model Booking {
+model HotelBooking {
   id           String        @id @default(uuid()) @db.Uuid
   guestId      String        @map("guest_id") @db.Uuid
   guest        Guest         @relation(fields: [guestId], references: [id])
@@ -128,6 +128,36 @@ model Booking {
   checkOut     DateTime      @map("check_out") @db.Date
   numGuests    Int           @map("num_guests")
   status       BookingStatus
+
+  // ─── Sprint 7 enrichment (S7-03) ──
+  // Room descriptors — all nullable to backfill safely from existing rows.
+  roomTypeName       String?  @map("room_type_name")
+  roomTypeCode       String?  @map("room_type_code")
+  bedConfig          String?  @map("bed_config")
+  view               String?
+  unitSqm            Int?     @map("unit_sqm")
+  amenities          String[] @default([])
+  specialFeatures    String[] @default([]) @map("special_features")
+  // Pricing snapshot — captured from HotelLink at ingest. Currency is
+  // ISO-4217 alpha-3; nullable for legacy rows that pre-date the snapshot.
+  pricePerNightMinor Int?     @map("price_per_night_minor")
+  subtotalMinor      Int?     @map("subtotal_minor")
+  feesTaxesMinor     Int?     @map("fees_taxes_minor")
+  totalPaidMinor     Int?     @map("total_paid_minor")
+  currency           String?  @db.Char(3)
+  // Confirmation number is the carrier-issued PNR-equivalent for the stay;
+  // distinct from `externalRef` which is the HotelLink booking id.
+  confirmationNumber String?  @map("confirmation_number")
+  // Guest home address — used to infer Trip.originAirportIata.
+  // Shape: { country, stateOrRegion, city, postcode, line1?, line2? }.
+  // Optional in the HotelLink payload (Sprint 7 codes defensively per
+  // kickoff §6 #1) — null until the HotelLink team confirms the field.
+  address            Json?
+  // Raw HotelLink payload for diagnostic + replay. Sprint 7 ingest writes
+  // the full inbound shape here so structured columns can be re-derived
+  // without re-receiving events.
+  rawPayload         Json     @default("{}") @map("raw_payload")
+
   transactions Transaction[]
   messageLogs  MessageLog[]
   conversation Conversation?
@@ -135,7 +165,7 @@ model Booking {
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
 
-  @@map("bookings")
+  @@map("hotel_bookings")
 }
 
 // ─── Sprint 2 models ─────────────────────────────────────────────────────────
@@ -201,7 +231,7 @@ model Transaction {
   guestId                 String              @map("guest_id") @db.Uuid
   guest                   Guest               @relation(fields: [guestId], references: [id])
   bookingId               String              @map("booking_id") @db.Uuid
-  booking                 Booking             @relation(fields: [bookingId], references: [id])
+  hotelBooking                 HotelBooking             @relation(fields: [bookingId], references: [id])
   upsellId                String              @map("upsell_id") @db.Uuid
   upsell                  Upsell              @relation(fields: [upsellId], references: [id])
   savedCardId             String?             @map("saved_card_id") @db.Uuid
@@ -232,6 +262,12 @@ model Transaction {
 
 // ─── Sprint 3 models ─────────────────────────────────────────────────────────
 
+enum FlightSegmentStatus {
+  CONFIRMED
+  TIME_CHANGED
+  CANCELLED
+}
+
 model FlightBooking {
   id              String           @id @default(uuid()) @db.Uuid
   guestId         String           @map("guest_id") @db.Uuid
@@ -243,6 +279,32 @@ model FlightBooking {
   returnAt        DateTime?        @map("return_at") @db.Timestamptz
   carrier         String           @db.Char(2)
   metadata        Json             @default("{}")
+
+  // ─── Sprint 7 enrichment (S7-04) ──
+  // Outbound leg — populated on every ingest; status defaults to CONFIRMED.
+  outboundFlightNumber        String?              @map("outbound_flight_number")
+  outboundGate                String?              @map("outbound_gate")
+  outboundTerminal            String?              @map("outbound_terminal")
+  outboundStatus              FlightSegmentStatus  @default(CONFIRMED) @map("outbound_status")
+  // Original departure is stamped when a TIME_CHANGED webhook lands so the
+  // UI can render the strike-through "was 09:00, now 11:30" pattern.
+  outboundOriginalDepartureAt DateTime?            @map("outbound_original_departure_at") @db.Timestamptz
+  outboundChangedAt           DateTime?            @map("outbound_changed_at") @db.Timestamptz
+  outboundChangeReason        String?              @map("outbound_change_reason")
+  // Return leg — optional. Status nullable since one-way trips skip it.
+  returnFlightNumber          String?              @map("return_flight_number")
+  returnGate                  String?              @map("return_gate")
+  returnTerminal              String?              @map("return_terminal")
+  returnStatus                FlightSegmentStatus? @map("return_status")
+  returnOriginalDepartureAt   DateTime?            @map("return_original_departure_at") @db.Timestamptz
+  returnChangedAt             DateTime?            @map("return_changed_at") @db.Timestamptz
+  returnChangeReason          String?              @map("return_change_reason")
+  // PNR = the carrier's record-locator. Distinct from `externalRef` which is
+  // the JetSeeker-assigned id.
+  pnr                         String?
+  // Raw JetSeeker payload — see S7-14 for the live-wire contract.
+  rawPayload                  Json                 @default("{}") @map("raw_payload")
+
   insuranceQuotes InsuranceQuote[]
   createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz
   updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz
@@ -379,7 +441,7 @@ model MessageLog {
   guestId           String?       @map("guest_id") @db.Uuid
   guest             Guest?        @relation(fields: [guestId], references: [id])
   bookingId         String?       @map("booking_id") @db.Uuid
-  booking           Booking?      @relation(fields: [bookingId], references: [id])
+  hotelBooking           HotelBooking?      @relation(fields: [bookingId], references: [id])
   kind              MessageKind
   templateId        String        @map("template_id")
   /// Email rows populate this; SMS rows leave it null and use recipientPhone.
@@ -410,7 +472,7 @@ enum NotificationKind {
   WELCOME_TO_RESORT
 }
 
-/// Guest-thread persistence for the /c/[token] chat surface. One per Booking.
+/// Guest-thread persistence for the /c/[token] chat surface. One per HotelBooking.
 /// SEPARATE from MessageLog (the outbound delivery audit) — these two layers
 /// do not import each other. SMS dispatch writes a MessageLog row; the chat
 /// thread starts when the guest opens /c/[token] and the AI greeting renders
@@ -418,7 +480,7 @@ enum NotificationKind {
 model Conversation {
   id             String        @id @default(uuid()) @db.Uuid
   bookingId      String        @unique @map("booking_id") @db.Uuid
-  booking        Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  hotelBooking        HotelBooking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   /// "pre_arrival" (Sprint 6); future: "in_stay" | "post_stay".
   kind           String        @default("pre_arrival")
   greetingSentAt DateTime?     @map("greeting_sent_at") @db.Timestamptz
@@ -451,7 +513,7 @@ model ChatMessage {
 model Notification {
   id        String           @id @default(uuid()) @db.Uuid
   bookingId String           @map("booking_id") @db.Uuid
-  booking   Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  hotelBooking   HotelBooking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   kind      NotificationKind
   title     String
   body      String

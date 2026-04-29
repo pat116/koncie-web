@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
   if (!guest) {
     return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
   }
-  const booking = await prisma.booking.findFirst({
+  const booking = await prisma.hotelBooking.findFirst({
     where: { id: bookingId, guestId: guest.id },
     select: { id: true },
   });

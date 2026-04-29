@@ -13,7 +13,7 @@ import { prisma } from '@/lib/db/prisma';
 export async function seedNotificationsForBooking(bookingId: string): Promise<{
   created: number;
 }> {
-  const booking = await prisma.booking.findUnique({
+  const booking = await prisma.hotelBooking.findUnique({
     where: { id: bookingId },
     include: { property: true, guest: true },
   });
@@ -33,7 +33,7 @@ export async function seedNotificationsForBooking(bookingId: string): Promise<{
         bookingId,
         kind: 'BOOKING_CONFIRMED',
         title: 'Your trip is confirmed',
-        body: `Booking confirmed for ${booking.property.name}.`,
+        body: `HotelBooking confirmed for ${booking.property.name}.`,
         inlineCta: { label: 'View itinerary', href: '/hub' } as object,
         read: true, // Per DoD §4.6 — booking-confirmed lands as read.
         readAt: new Date(),
