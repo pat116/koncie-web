@@ -19,7 +19,8 @@
  *  5. Return the upserted entities plus the messageLogId (or null if we
  *     skipped the send) so the webhook can echo it back in the 200.
  */
-import type { HotelBooking, Guest, Prisma } from '@prisma/client';
+import type { HotelBooking, Guest, Trip, Cart } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/prisma';
 import { signMagicLink } from '@/lib/auth/signed-link';
 import { sendMessage } from '@/lib/messaging/send';
@@ -28,6 +29,9 @@ import {
   hotelLinkWebhookPayloadSchema,
   type HotelLinkWebhookPayload,
 } from '@/adapters/hotellink-mock';
+import { generateTripSlug } from '@/lib/trip/slug';
+import { derivePhase } from '@/lib/trip/phase';
+import { inferOriginAirportIata } from '@/lib/trip/originAirport';
 
 export class PropertyNotFoundError extends Error {
   constructor(readonly slug: string) {
@@ -39,6 +43,11 @@ export class PropertyNotFoundError extends Error {
 export type IngestResult = {
   guest: Guest;
   hotelBooking: HotelBooking;
+  // Sprint 7 — Trip + Cart created on first ingest of a CONFIRMED booking.
+  // Re-ingest of the same bookingRef is a no-op past the upsert: trip and
+  // cart on the result reflect the EXISTING rows, not new ones.
+  trip: Trip | null;
+  cart: Cart | null;
   messageLogId: string | null;
   skipped: null | 'non_confirmed_status' | 'already_sent';
 };
@@ -60,7 +69,7 @@ export async function ingestHotelLinkBooking(
 
   const property = await prisma.property.findUnique({
     where: { slug: payload.propertySlug },
-    select: { id: true, name: true },
+    select: { id: true, name: true, timezone: true },
   });
   if (!property) {
     throw new PropertyNotFoundError(payload.propertySlug);
@@ -69,7 +78,7 @@ export async function ingestHotelLinkBooking(
   const checkInDate = new Date(payload.checkIn);
   const checkOutDate = new Date(payload.checkOut);
 
-  const { guest, hotelBooking } = await prisma.$transaction(async (tx) => {
+  const { guest, hotelBooking, trip, cart } = await prisma.$transaction(async (tx) => {
     const g = await tx.guest.upsert({
       where: { email: payload.guest.email },
       create: {
@@ -83,13 +92,43 @@ export async function ingestHotelLinkBooking(
       },
     });
 
+    // Sprint 7 enrichment payload. All fields nullable in the schema so we
+    // copy whatever the inbound payload provides; missing fields land as
+    // NULL (or default '{}'/[] for JSON / array columns).
+    const room = payload.room ?? null;
+    const pricing = payload.pricing ?? null;
+    const address = payload.guest.address ?? null;
+
     const bookingData = {
       propertyId: property.id,
       checkIn: checkInDate,
       checkOut: checkOutDate,
       numGuests: payload.numGuests,
       status: payload.status,
-    } satisfies Omit<Prisma.HotelBookingUncheckedCreateInput, 'externalRef' | 'guestId'>;
+      // Room descriptors — nullable in schema.
+      roomTypeName: room?.name ?? null,
+      roomTypeCode: room?.code ?? null,
+      bedConfig: room?.bedConfig ?? null,
+      view: room?.view ?? null,
+      unitSqm: room?.sqm ?? null,
+      // Array columns default to [] in the DB; only override when provided.
+      ...(room?.amenities ? { amenities: room.amenities } : {}),
+      ...(room?.specialFeatures
+        ? { specialFeatures: room.specialFeatures }
+        : {}),
+      // Pricing snapshot.
+      pricePerNightMinor: pricing?.pricePerNightMinor ?? null,
+      subtotalMinor: pricing?.subtotalMinor ?? null,
+      feesTaxesMinor: pricing?.feesTaxesMinor ?? null,
+      totalPaidMinor: pricing?.totalPaidMinor ?? null,
+      currency: pricing?.currency ?? null,
+      confirmationNumber: payload.confirmationNumber ?? null,
+      address: address as Prisma.InputJsonValue | null,
+      rawPayload: payload as unknown as Prisma.InputJsonValue,
+    } satisfies Omit<
+      Prisma.HotelBookingUncheckedCreateInput,
+      'externalRef' | 'guestId'
+    >;
 
     const b = await tx.hotelBooking.upsert({
       where: { externalRef: payload.bookingRef },
@@ -104,11 +143,62 @@ export async function ingestHotelLinkBooking(
       },
     });
 
-    return { guest: g, hotelBooking: b };
+    // Sprint 7 (S7-12) — Trip + OPEN Cart creation in the same transaction.
+    // Idempotent: re-ingest finds an existing Trip on `hotelBookingId` and
+    // skips the create (so no second slug, no second cart, no second email
+    // — the magic-link send is gated separately on MessageLog dedupe).
+    let t: Trip | null = null;
+    let c: Cart | null = null;
+    const existingTrip = await tx.trip.findUnique({
+      where: { hotelBookingId: b.id },
+    });
+    if (existingTrip) {
+      t = existingTrip;
+      c = await tx.cart.findFirst({ where: { tripId: existingTrip.id } });
+    } else {
+      const slug = await generateTripSlug({
+        propertyName: property.name,
+        tx,
+      });
+      const phase = derivePhase({
+        hotelBookingStatus: b.status,
+        checkIn: b.checkIn,
+        checkOut: b.checkOut,
+        propertyTimezone: property.timezone,
+      });
+      const originAirportIata = inferOriginAirportIata(address);
+      const PREP_DEFAULT = {
+        documents: { status: 'PENDING', checkedAt: null },
+        health: { status: 'PENDING', checkedAt: null },
+        weather: { status: 'PENDING', checkedAt: null },
+        currency: { status: 'PENDING', checkedAt: null },
+        customs: { status: 'PENDING', checkedAt: null },
+      };
+      t = await tx.trip.create({
+        data: {
+          slug,
+          guestId: g.id,
+          hotelBookingId: b.id,
+          originAirportIata,
+          startDate: b.checkIn,
+          endDate: b.checkOut,
+          phase,
+          preparationStatus: PREP_DEFAULT as unknown as Prisma.InputJsonValue,
+        },
+      });
+      c = await tx.cart.create({
+        data: {
+          tripId: t.id,
+          state: 'OPEN',
+        },
+      });
+    }
+
+    return { guest: g, hotelBooking: b, trip: t, cart: c };
   });
 
   if (payload.status !== 'CONFIRMED') {
-    return { guest, hotelBooking, messageLogId: null, skipped: 'non_confirmed_status' };
+    return { guest, hotelBooking, trip, cart, messageLogId: null, skipped: 'non_confirmed_status' };
   }
 
   // BOOKING_CONFIRMED notification (Sprint-6 completion §3.S6-09).
@@ -135,7 +225,7 @@ export async function ingestHotelLinkBooking(
     select: { id: true },
   });
   if (existing) {
-    return { guest, hotelBooking, messageLogId: existing.id, skipped: 'already_sent' };
+    return { guest, hotelBooking, trip, cart, messageLogId: existing.id, skipped: 'already_sent' };
   }
 
   const token = await signMagicLink({
@@ -164,6 +254,8 @@ export async function ingestHotelLinkBooking(
   return {
     guest,
     hotelBooking,
+    trip,
+    cart,
     messageLogId: result.messageLog.id,
     skipped: null,
   };

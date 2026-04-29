@@ -34,10 +34,29 @@ const BOOKING = {
 
 function wireDefaultPrisma() {
   (prisma as any).property = {
-    findUnique: vi.fn().mockResolvedValue(PROPERTY),
+    findUnique: vi.fn().mockResolvedValue({
+      ...PROPERTY,
+      timezone: 'Pacific/Fiji',
+    }),
   };
   (prisma as any).guest = { upsert: vi.fn().mockResolvedValue(GUEST) };
-  (prisma as any).hotelBooking = { upsert: vi.fn().mockResolvedValue(BOOKING) };
+  (prisma as any).hotelBooking = {
+    upsert: vi.fn().mockResolvedValue({
+      ...BOOKING,
+      checkIn: new Date('2026-08-04T00:00:00Z'),
+      checkOut: new Date('2026-08-11T00:00:00Z'),
+    }),
+  };
+  // Sprint 7 (S7-12) — Trip + OPEN Cart created in the same transaction.
+  // Default: no existing trip, ingest creates fresh ones.
+  (prisma as any).trip = {
+    findUnique: vi.fn().mockResolvedValue(null),
+    create: vi.fn().mockResolvedValue({ id: 'trip-1', slug: 'namotu-island-fiji' }),
+  };
+  (prisma as any).cart = {
+    findFirst: vi.fn().mockResolvedValue(null),
+    create: vi.fn().mockResolvedValue({ id: 'cart-1', state: 'OPEN' }),
+  };
   (prisma as any).messageLog = {
     findFirst: vi.fn().mockResolvedValue(null),
   };
